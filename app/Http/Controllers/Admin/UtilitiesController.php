@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Encryption\Encrypter;
 use App\Models\Consumer;
 use App\Models\ProfileDetail;
+use App\Models\FeeFundCategory;
 
 class UtilitiesController extends Controller
 {
@@ -66,6 +67,8 @@ class UtilitiesController extends Controller
                         'unchanged' => 0,
                     ];
 
+                    $validCategoryIds = FeeFundCategory::pluck('id')->toArray();
+
                     foreach ($decryptedData as $decrypted) {
                         $validator = Validator::make((array) $decrypted, [
                             's_id' => 'required|integer|digits_between:1,6',
@@ -79,6 +82,7 @@ class UtilitiesController extends Controller
                             'educational_level' => 'required|string|max:255',
                             'section_name' => 'required|string|max:255',
                             'class_name' => 'required|string|max:255',
+                            'fee_category' => 'nullable|string',
                         ]);
 
                         if ($validator->fails()) {
@@ -93,6 +97,18 @@ class UtilitiesController extends Controller
                         $validated = $validator->validated();
 
                         $validated['consumer_number'] = $validated['s_region_idFk'] . $validated['s_school_idFk'] .   str_pad($validated['s_id'], 6, '0', STR_PAD_LEFT);
+
+                        $feeFundCategoryIds = [];
+                        if (isset($validated['fee_category'])) {
+                            $decodedCategories = json_decode($validated['fee_category'], true);
+
+                            if (is_array($decodedCategories)) {
+                                if (in_array(1, $decodedCategories) && in_array(4, $decodedCategories)) {
+                                     $decodedCategories = array_diff($decodedCategories, [4]);
+                                }
+                                $feeFundCategoryIds = array_values(array_intersect($decodedCategories, $validCategoryIds));
+                            }
+                        }
 
                         // 1. Process Consumer
                         $consumer = Consumer::firstOrNew(['identification_number' => $validated['std_form_b']]);
@@ -121,6 +137,7 @@ class UtilitiesController extends Controller
                             'institution_level' => $validated['educational_level'],
                             'class' => $validated['class_name'],
                             'section' => $validated['section_name'],
+                            'fee_fund_category_ids' => $feeFundCategoryIds,
                             'is_active' => 1,
                         ]);
 
