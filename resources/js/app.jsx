@@ -19,7 +19,11 @@ const mantineTheme = createTheme({
 createInertiaApp({
     resolve: (name) => {
         const pages = import.meta.glob('./Pages/**/*.jsx', { eager: true });
-        return pages[`./Pages/${name}.jsx`];
+        const page = pages[`./Pages/${name}.jsx`];
+        if (!page) {
+            throw new Error(`Page not found: ${name}. Check that ./Pages/${name}.jsx exists.`);
+        }
+        return page;
     },
     setup({ el, App, props }) {
         createRoot(el).render(

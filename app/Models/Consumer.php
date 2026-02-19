@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\ActiveChallan;
 
@@ -50,6 +51,22 @@ class Consumer extends Model
     public function activeChallans(): HasMany
     {
         return $this->hasMany(ActiveChallan::class, 'consumer_id');
+    }
+
+    /**
+     * Get the region this consumer belongs to.
+     */
+    public function region(): BelongsTo
+    {
+        return $this->belongsTo(Region::class);
+    }
+
+    /**
+     * Get the institution this consumer belongs to.
+     */
+    public function institution(): BelongsTo
+    {
+        return $this->belongsTo(Institution::class);
     }
 
     /**

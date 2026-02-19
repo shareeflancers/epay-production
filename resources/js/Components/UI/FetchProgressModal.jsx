@@ -77,7 +77,7 @@ function formatErrorText(message, errors) {
     return parts.join('\n');
 }
 
-export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLabel }) {
+export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLabel, fetchMethod = 'GET' }) {
     const { colorConfig, ui } = useTheme();
     const [progress, setProgress] = useState(0);
     const [status, setStatus] = useState(STATUS.IDLE);
@@ -86,6 +86,7 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
     const [copied, setCopied] = useState(false);
     const [recordCount, setRecordCount] = useState(null);
     const [syncStats, setSyncStats] = useState(null);
+    const [resultMessage, setResultMessage] = useState(null);
     const intervalRef = useRef(null);
     const abortRef = useRef(null);
 
@@ -144,18 +145,31 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
         setCopied(false);
         setRecordCount(null);
         setSyncStats(null);
+        setResultMessage(null);
 
         const abortController = new AbortController();
         abortRef.current = abortController;
 
         startProgressSimulation();
 
-        fetch(fetchUrl, {
-            signal: abortController.signal,
-            headers: {
+        const fetchHeaders = {
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
-            },
+            };
+
+        // Include CSRF token for non-GET requests
+        if (fetchMethod !== 'GET') {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (csrfToken) {
+                fetchHeaders['X-CSRF-TOKEN'] = csrfToken;
+            }
+            fetchHeaders['Content-Type'] = 'application/json';
+        }
+
+        fetch(fetchUrl, {
+            method: fetchMethod,
+            signal: abortController.signal,
+            headers: fetchHeaders,
         })
             .then(response => response.json())
             .then(data => {
@@ -165,7 +179,21 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
                     setProgress(100);
                     setStatus(STATUS.COMPLETE);
 
-                    if (data.stats) {
+                    if (data.generated !== undefined) {
+                        // Bulk challan generation — build detailed message
+                        let msg = data.message;
+                        if (data.skip_reasons) {
+                            const reasons = [];
+                            if (data.skip_reasons.no_profile > 0) reasons.push(`${data.skip_reasons.no_profile} no profile`);
+                            if (data.skip_reasons.no_categories > 0) reasons.push(`${data.skip_reasons.no_categories} no categories`);
+                            if (data.skip_reasons.no_institution > 0) reasons.push(`${data.skip_reasons.no_institution} no institution`);
+                            if (data.skip_reasons.no_fee_structure > 0) reasons.push(`${data.skip_reasons.no_fee_structure} no fee structure`);
+                            if (reasons.length > 0) {
+                                msg += '\n\nSkip breakdown: ' + reasons.join(', ');
+                            }
+                        }
+                        setResultMessage(msg);
+                    } else if (data.stats) {
                         setSyncStats(data.stats);
                     } else if (data.data && Array.isArray(data.data)) {
                         setRecordCount(data.data.length);
@@ -191,15 +219,7 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
         return cleanup;
     }, [opened, fetchUrl]);
 
-    // Auto-close after success
-    useEffect(() => {
-        if (status === STATUS.COMPLETE) {
-            const timer = setTimeout(() => {
-                onClose();
-            }, 2000);
-            return () => clearTimeout(timer);
-        }
-    }, [status, onClose]);
+    // Modal stays open after completion — user closes it manually
 
     const handleClose = () => {
         cleanup();
@@ -373,7 +393,7 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
 
                 {/* Title */}
                 <Text fw={600} size="lg" ta="center" style={{ color: ui.text }}>
-                    Fetching {fetchLabel}
+                    {fetchMethod !== 'GET' ? 'Processing' : 'Fetching'} {fetchLabel}
                 </Text>
 
                 {/* Progress Ring */}
@@ -418,7 +438,11 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
                     {renderErrorBox()}
 
                     {status === STATUS.COMPLETE && (
-                        syncStats ? (
+                        resultMessage ? (
+                            <Text size="sm" c="dimmed" mt={4} style={{ whiteSpace: 'pre-line' }}>
+                                {resultMessage}
+                            </Text>
+                        ) : syncStats ? (
                             <Box>
                                 <Text size="sm" c="dimmed" mt={4}>
                                     {(syncStats.inserted === 0 && syncStats.updated === 0)

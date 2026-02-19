@@ -77,8 +77,11 @@ Route::prefix('admin')->group(function () {
     Route::put('/settings/student/{id}/status', [SettingsController::class, 'toggleStatus'])->name('admin.settings.toggle-status');
     Route::delete('/settings/student/{id}', [SettingsController::class, 'destroy'])->name('admin.settings.destroy');
 
-    // Utilities
-    Route::get('/utilities/challanUpdate', [UtilitiesController::class, 'challanUpdate'])->name('admin.utilities.challanUpdate');
+    // Challan Update & Bulk Generation
+    Route::get('/utilities/challanUpdate', [SettingsController::class, 'challanIndex'])->name('admin.utilities.challanUpdate');
+    Route::post('/settings/challan/search', [SettingsController::class, 'challanSearch'])->name('admin.settings.challan.search');
+    Route::put('/settings/challan/{id}', [SettingsController::class, 'challanUpdateSingle'])->name('admin.settings.challan.update');
+    Route::post('/utilities/generateChallans', [SettingsController::class, 'generateBulkChallans'])->name('admin.utilities.generateChallans');
 
     // 1Link Testing
     Route::get('/one-link-testing', function () {

@@ -98,15 +98,16 @@ class UtilitiesController extends Controller
 
                         $validated['consumer_number'] = $validated['s_region_idFk'] . $validated['s_school_idFk'] .   str_pad($validated['s_id'], 6, '0', STR_PAD_LEFT);
 
-                        $feeFundCategoryIds = [];
-                        if (isset($validated['fee_category'])) {
+                        $feeFundCategoryIds = null;
+                        if (!empty($validated['fee_category'])) {
                             $decodedCategories = json_decode($validated['fee_category'], true);
 
-                            if (is_array($decodedCategories)) {
+                            if (is_array($decodedCategories) && count($decodedCategories) > 0) {
                                 if (in_array(1, $decodedCategories) && in_array(4, $decodedCategories)) {
                                      $decodedCategories = array_diff($decodedCategories, [4]);
                                 }
-                                $feeFundCategoryIds = array_values(array_intersect($decodedCategories, $validCategoryIds));
+                                $validIds = array_values(array_intersect($decodedCategories, $validCategoryIds));
+                                $feeFundCategoryIds = count($validIds) > 0 ? $validIds : null;
                             }
                         }
 
@@ -164,57 +165,6 @@ class UtilitiesController extends Controller
                         'stats' => $stats
                     ]);
                     break;
-                // case 'institution':
-                //     foreach ($decryptedData as $decrypted) {
-                //         $validator = Validator::make((array) $decrypted, [
-                //             's_school_idFk' => 'required|integer|digits_between:1,3',
-                //             's_region_idFk' => 'required|integer|digits_between:1,3',
-                //             'std_form_b' => 'required|integer|digits_between:1,13',
-                //             'region_name' => 'required|string|max:255',
-                //             'institution_name' => 'required|string|max:255',
-                //             'educational_level' => 'required|string|max:255',
-                //         ]);
-
-                //         if ($validator->fails()) {
-                //             DB::rollBack();
-                //             return response()->json([
-                //                 'success' => false,
-                //                 'message' => 'Validation failed',
-                //                 'errors' => $validator->errors()
-                //             ], 422);
-                //         }
-
-                //         $validated = $validator->validated();
-
-                //         $validated['consumer_number'] = $validated['std_form_b'];
-
-                //         // Create or update Consumer
-                //         $consumer = Consumer::updateOrCreate(
-                //             ['identification_number' => $validated['std_form_b']], // Search criteria
-                //             [
-                //                 'consumer_type' => 'institution',
-                //                 'consumer_number' => $validated['consumer_number'],
-                //                 'institution_id' => $validated['s_school_idFk'],
-                //                 'region_id' => $validated['s_region_idFk'],
-                //                 'is_active' => 1,
-                //             ]
-                //         );
-
-                //         // Create or update ProfileDetail linked to the Consumer
-                //         ProfileDetail::updateOrCreate(
-                //             [
-                //                 'consumer_id' => $consumer->id,
-                //                 'profile_type' => 'institution'
-                //             ],
-                //             [
-                //                 'region_name' => $validated['region_name'],
-                //                 'institution_name' => $validated['institution_name'],
-                //                 'institution_level' => $validated['educational_level'],
-                //                 'is_active' => 1,
-                //             ]
-                //         );
-                //     }
-                //     break;
                 default:
                     break;
             }

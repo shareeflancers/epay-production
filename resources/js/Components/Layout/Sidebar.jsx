@@ -87,15 +87,15 @@ export default function Sidebar() {
     const collapsed = !desktopOpened;
 
     // Fetch modal state
-    const [fetchModal, setFetchModal] = useState({ opened: false, url: '', label: '' });
+    const [fetchModal, setFetchModal] = useState({ opened: false, url: '', label: '', method: 'GET' });
 
-    const openFetchModal = (href, label) => {
+    const openFetchModal = (href, label, method = 'GET') => {
         const cleanLabel = label.replace('→ ', '').replace('Fetch ', '');
-        setFetchModal({ opened: true, url: href, label: cleanLabel });
+        setFetchModal({ opened: true, url: href, label: cleanLabel, method });
     };
 
     const closeFetchModal = () => {
-        setFetchModal({ opened: false, url: '', label: '' });
+        setFetchModal({ opened: false, url: '', label: '', method: 'GET' });
     };
 
     const isActive = (href) => {
@@ -121,25 +121,26 @@ export default function Sidebar() {
 
                         // Recursive function to render children could be here, but for 1 level deep:
                         const childrenItems = hasChildren ? item.children.map(child => {
-                            const isFetchAction = child.action === 'fetch';
+                            const isActionItem = child.action === 'fetch' || child.action === 'generate';
                             return (
                                 <NavLink
                                     key={child.href}
-                                    component={isFetchAction ? 'button' : Link}
-                                    href={isFetchAction ? undefined : child.href}
+                                    component={isActionItem ? 'button' : Link}
+                                    href={isActionItem ? undefined : child.href}
                                     label={child.label}
                                     active={isActive(child.href)}
                                     onClick={() => {
                                         closeMobile();
-                                        if (isFetchAction) {
-                                            openFetchModal(child.href, child.label);
+                                        if (isActionItem) {
+                                            const method = child.action === 'generate' ? 'POST' : 'GET';
+                                            openFetchModal(child.href, child.label, method);
                                         }
                                     }}
                                     style={{
                                         borderRadius: 8,
                                         fontSize: '0.9em',
                                         fontWeight: isActive(child.href) ? 600 : undefined,
-                                        cursor: isFetchAction ? 'pointer' : undefined,
+                                        cursor: isActionItem ? 'pointer' : undefined,
                                     }}
                                 />
                             );
@@ -220,6 +221,7 @@ export default function Sidebar() {
                 onClose={closeFetchModal}
                 fetchUrl={fetchModal.url}
                 fetchLabel={fetchModal.label}
+                fetchMethod={fetchModal.method}
             />
         </>
     );

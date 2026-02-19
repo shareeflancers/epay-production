@@ -66,6 +66,19 @@ class ChallansController extends Controller
 
             // Check if challan exists
             if (!$challan) {
+                // Check if a paid challan exists for this month
+                $paidChallan = ActiveChallan::where('consumer_id', $consumer->id)
+                    ->where('status', 'P')
+                    ->whereMonth('due_date', now()->month)
+                    ->whereYear('due_date', now()->year)
+                    ->first();
+
+                if ($paidChallan) {
+                    return response()->json([
+                        'message' => 'Challan is already paid for the month'
+                    ], 200);
+                }
+
                 return response()->json([
                     'message' => 'No unpaid challan found for this consumer'
                 ], 404);
@@ -131,6 +144,19 @@ class ChallansController extends Controller
 
             // Check if challan exists
             if (!$challan) {
+                // Check if a paid challan exists for this month
+                $paidChallan = ActiveChallan::where('consumer_id', $consumer->id)
+                    ->where('status', 'P')
+                    ->whereMonth('due_date', now()->month)
+                    ->whereYear('due_date', now()->year)
+                    ->first();
+
+                if ($paidChallan) {
+                    return response()->json([
+                        'message' => 'Challan is already paid for the month'
+                    ], 200);
+                }
+
                 return response()->json([
                     'message' => 'No unpaid challan found for this consumer'
                 ], 404);

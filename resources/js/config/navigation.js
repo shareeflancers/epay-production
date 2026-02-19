@@ -57,7 +57,6 @@ export const adminNavItems = [
             { label: '→ Fetch Students', href: '/admin/api/fetch/student', action: 'fetch' },
             { label: '→ Fetch Institutions', href: '/admin/api/fetch/institution', action: 'fetch' },
             { label: '→ Fetch Inductees', href: '/admin/api/fetch/inductee', action: 'fetch' },
-            { label: '→ Send Categories', href: '/admin/api/send/categories'},
         ]
     },
     {
@@ -67,6 +66,7 @@ export const adminNavItems = [
         children: [
             { label: '→ Category Update', href: '/admin/utilities/categoryBind' },
             { label: '→ Challan Update', href: '/admin/utilities/challanUpdate' },
+            { label: '→ Generate Challans', href: '/admin/utilities/generateChallans', action: 'generate' },
             { label: '→ 1Link API Test', href: '/admin/one-link-testing' },
         ]
     },
