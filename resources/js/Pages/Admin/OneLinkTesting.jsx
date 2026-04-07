@@ -80,6 +80,7 @@ export default function OneLinkTesting() {
             username: '',
             password: '',
             tran_auth_id: 'TX1234',
+            tran_ref_number: 'REF' + Date.now().toString().slice(-8),
             transaction_amount: 100,
             tran_date: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
             tran_time: new Date().toTimeString().slice(0, 8).replace(/:/g, ''),
@@ -89,6 +90,7 @@ export default function OneLinkTesting() {
         validate: {
             consumer_number: (v) => (v ? null : 'Required'),
             tran_auth_id: (v) => (v ? null : 'Required'),
+            tran_ref_number: (v) => (v ? null : 'Required'),
             transaction_amount: (v) => (v > 0 ? null : 'Must be > 0'),
             username: (v) => (v ? null : 'Required'),
             password: (v) => (v ? null : 'Required'),
@@ -125,6 +127,7 @@ export default function OneLinkTesting() {
                     password: values.password,
                     transaction_amount: amount,
                     tran_auth_id: data.tran_auth_Id || randomTranAuthId(),
+                    tran_ref_number: 'REF' + Date.now().toString().slice(-8),
                     tran_date: data.due_date || now.toISOString().slice(0, 10).replace(/-/g, ''),
                     tran_time: now.toTimeString().slice(0, 8).replace(/:/g, ''),
                     bank_mnemonic: BANK_MNEMONICS[Math.floor(Math.random() * BANK_MNEMONICS.length)],
@@ -154,6 +157,7 @@ export default function OneLinkTesting() {
                 body: JSON.stringify({
                     consumer_number: values.consumer_number,
                     tran_auth_id: values.tran_auth_id,
+                    tran_ref_number: values.tran_ref_number,
                     transaction_amount: values.transaction_amount,
                     tran_date: values.tran_date,
                     tran_time: values.tran_time,
@@ -356,6 +360,14 @@ export default function OneLinkTesting() {
                                         {...paymentForm.getInputProps('consumer_number')}
                                     />
 
+                                    <TextInput
+                                        label="Tran Ref Number"
+                                        placeholder="Unique reference (max 24 chars)"
+                                        maxLength={24}
+                                        size="sm"
+                                        {...paymentForm.getInputProps('tran_ref_number')}
+                                    />
+
                                     <Group grow>
                                         <TextInput
                                             label="Tran Auth ID"
@@ -368,6 +380,7 @@ export default function OneLinkTesting() {
                                             label="Amount"
                                             min={0}
                                             size="sm"
+                                            hideControls
                                             {...paymentForm.getInputProps('transaction_amount')}
                                         />
                                     </Group>

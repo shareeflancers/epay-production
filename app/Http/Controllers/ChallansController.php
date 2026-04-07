@@ -109,7 +109,7 @@ class ChallansController extends Controller
             // Let Laravel's validation format be returned in JSON-friendly way
             return response()->json([
                 'response_Code' => '06',
-                'message' => 'Invalid Data (' . $e->errors() . ')'
+                'message' => 'Invalid Data (' . json_encode($e->errors()) . ')'
             ], 200);
         } catch (Throwable $e) {
             Log::error('billInquiry error', ['exception' => $e, 'request' => $request->all()]);
@@ -216,7 +216,7 @@ class ChallansController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'response_Code' => '06',
-                'message' => 'Invalid Data (' . $e->errors() . ')'
+                'message' => 'Invalid Data (' . json_encode($e->errors()) . ')'
             ], 200);
         } catch (Throwable $e) {
             Log::error('billPayment error', ['exception' => $e, 'request' => $request->all()]);
