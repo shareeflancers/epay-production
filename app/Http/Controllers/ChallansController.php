@@ -100,11 +100,10 @@ class ChallansController extends Controller
             }
 
             // Return the challan details as JSON
-            return response()->json([
+            return response()->json(array_merge([
                 'response_Code' => '00',
                 'message' => 'Successful Bill Inquiry',
-                $challan->toOneLinkInquiryResponse()
-            ], 200);
+            ], $challan->toOneLinkInquiryResponse()), 200);
 
         } catch (ValidationException $e) {
             // Let Laravel's validation format be returned in JSON-friendly way
@@ -208,11 +207,11 @@ class ChallansController extends Controller
             $challan->save();
 
             // Return the challan details as JSON
-            return response()->json([
+
+            return response()->json(array_merge([
                 'response_Code' => '00',
                 'message' => 'Successful Bill Payment',
-                $challan->toOneLinkPaymentResponse()
-            ], 200);
+            ], $challan->toOneLinkPaymentResponse()), 200);
 
         } catch (ValidationException $e) {
             return response()->json([
