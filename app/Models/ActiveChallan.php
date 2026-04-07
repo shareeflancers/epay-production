@@ -24,6 +24,7 @@ class ActiveChallan extends Model
     protected $fillable = [
         'consumer_id',
         'challan_no',
+        'tran_ref_number',
         'status',
         'tran_auth_id',
         'bank_mnemonic',
