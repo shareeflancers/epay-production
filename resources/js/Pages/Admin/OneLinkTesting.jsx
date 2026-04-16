@@ -89,8 +89,8 @@ export default function OneLinkTesting() {
         },
         validate: {
             consumer_number: (v) => (v ? null : 'Required'),
-            tran_auth_id: (v) => (v ? null : 'Required'),
             tran_ref_number: (v) => (v ? null : 'Required'),
+            tran_auth_id: (v) => (v ? null : 'Required'),
             transaction_amount: (v) => (v > 0 ? null : 'Must be > 0'),
             username: (v) => (v ? null : 'Required'),
             password: (v) => (v ? null : 'Required'),
@@ -353,20 +353,21 @@ export default function OneLinkTesting() {
                                         />
                                     </Group>
 
-                                    <TextInput
-                                        label="Consumer Number"
-                                        placeholder="e.g. TEST001"
-                                        size="sm"
-                                        {...paymentForm.getInputProps('consumer_number')}
-                                    />
-
-                                    <TextInput
-                                        label="Tran Ref Number"
-                                        placeholder="Unique reference (max 24 chars)"
-                                        maxLength={24}
-                                        size="sm"
-                                        {...paymentForm.getInputProps('tran_ref_number')}
-                                    />
+                                    <Group grow>
+                                        <TextInput
+                                            label="Consumer Number"
+                                            placeholder="e.g. TEST001"
+                                            size="sm"
+                                            {...paymentForm.getInputProps('consumer_number')}
+                                        />
+                                        <TextInput
+                                            label="Tran Ref Number"
+                                            placeholder="Unique reference (max 24 chars)"
+                                            maxLength={24}
+                                            size="sm"
+                                            {...paymentForm.getInputProps('tran_ref_number')}
+                                        />
+                                    </Group>
 
                                     <Group grow>
                                         <TextInput
