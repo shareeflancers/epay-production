@@ -164,50 +164,57 @@ class ChallansController extends Controller
 
             // Search for challan using the consumer ID
             // Ideally we should match amount or other details, but for now we pick the latest unpaid
-            $challan = ActiveChallan::where('consumer_id', $consumer->id)
-                                    ->unpaid()
-                                    ->orderedForInquiry()
-                                    ->first();
+            $challan = ActiveChallan::where('consumer_id', $consumer->id)->orderedForInquiry()->first();
 
-            // Check if challan exists
-            if (!$challan) {
-                // Check if a paid challan exists for this month
-                $paidChallan = ActiveChallan::where('consumer_id', $consumer->id)
-                    ->whereMonth('due_date', now()->month)
-                    ->whereYear('due_date', now()->year)
-                    ->first();
-
-                if ($paidChallan->status == 'P') {
-                    return response()->json([
-                        'response_Code' => '03',
-                        'message' => 'Challan is already paid for the month of ' . $paidChallan->due_date->format('F Y')
-                    ], 200);
-                }
-
-                if ($paidChallan->status == 'B') {
-                    return response()->json([
-                        'response_Code' => '04',
-                        'message' => 'Challan is blocked for this Consumer'
-                    ], 200);
-                }
-
+            // Case 3: No challan found
+            if(!$challan){
                 return response()->json([
                     'response_Code' => '05',
                     'message' => 'No challan found for this Consumer'
                 ], 200);
             }
 
-            // Update challan details
-            $challan->status = "P"; // Mark as Paid
-            $challan->tran_ref_number = $validated['tran_ref_number'];
-            $challan->bank_mnemonic = $validated['bank_mnemonic'];
-            $challan->date_paid = date('Y-m-d H:i:s', strtotime($validated['tran_date'] . ' ' . $validated['tran_time']));
-            $challan->tran_auth_id = $validated['tran_auth_id'];
-            $challan->reserved = $validated['reserved'] ?? $challan->reserved;
-            $challan->save();
+            // Case 4: Challan is already paid
+            if($challan->status == 'P'){
+                return response()->json([
+                    'response_Code' => '03',
+                    'message' => 'Challan is already paid for the month of ' . $challan->due_date->format('F Y')
+                ], 200);
+            }
+
+            // Case 5: Challan is blocked
+            if($challan->status == 'B'){
+                return response()->json([
+                    'response_Code' => '04',
+                    'message' => 'Challan is blocked for this Consumer'
+                ], 200);
+            }
+
+            // Case 6: Check the amount
+            if($challan->amount_within_dueDate != $validated['transaction_amount']){
+                return response()->json([
+                    'response_Code' => '10',
+                    'message' => 'Transaction Amount Mismatch!'
+                ], 200);
+            }
+
+            // Case 7: Update challan details
+            if($challan->tran_auth_id == $validated['tran_auth_id']){
+                $challan->status = "P"; // Mark as Paid
+                $challan->tran_ref_number = $validated['tran_ref_number'];
+                $challan->bank_mnemonic = $validated['bank_mnemonic'];
+                $challan->date_paid = date('Y-m-d H:i:s', strtotime($validated['tran_date'] . ' ' . $validated['tran_time']));
+                $challan->tran_auth_id = $validated['tran_auth_id'];
+                $challan->reserved = $validated['reserved'] ?? $challan->reserved;
+                $challan->save();
+            }else{
+                return response()->json([
+                    'response_Code' => '09',
+                    'message' => 'Transaction Auth Id Mismatch!'
+                ], 200);
+            }
 
             // Return the challan details as JSON
-
             return response()->json(array_merge([
                 'response_Code' => '00',
                 'message' => 'Successful Bill Payment',

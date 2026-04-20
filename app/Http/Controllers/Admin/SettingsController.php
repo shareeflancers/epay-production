@@ -179,6 +179,7 @@ class SettingsController extends Controller
         // region_id is now directly on consumer; level_id comes via institution
 
         $generated = 0;
+        $updated = 0;
         $skipped = 0;
         $skipReasons = [
             'no_profile' => 0,
@@ -197,8 +198,13 @@ class SettingsController extends Controller
                 }, 'institution'])
                 ->chunk(100, function ($consumers) use (
                     $dueDate, $billingMonth,
-                    &$generated, &$skipped, &$skipReasons, &$skippedDetails
+                    &$generated, &$updated, &$skipped, &$skipReasons, &$skippedDetails
                 ) {
+                    // Fetch existing challans for this batch to prevent duplicates
+                    $existingChallans = ActiveChallan::whereIn('consumer_id', $consumers->pluck('id'))
+                        ->get()
+                        ->keyBy('consumer_id');
+
                     foreach ($consumers as $consumer) {
                         $profile = $consumer->profileDetails->first();
 
@@ -273,45 +279,56 @@ class SettingsController extends Controller
                             . "Base Amount: {$amountBase} | "
                             . "Due Date: {$dueDate}";
 
-                        // Generate unique challan number
-                        $challanNo = $this->generateUniqueChallanNo();
-
-                        ActiveChallan::create([
-                            'consumer_id'          => $consumer->id,
-                            'challan_no'           => $challanNo,
-                            'status'               => 'U',
-                            'tran_auth_id'         => null,
+                        // Prepare challan data
+                        $challanData = [
                             'due_date'             => $dueDate,
                             'amount_base'          => $amountBase,
                             'amount_arrears'       => 0.00,
                             'amount_within_dueDate' => $amountBase,
-                            'amount_after_dueDate'  => $amountBase,
+                            'amount_after_dueDate'  => $amountBase + 18.00,
                             'fee_type'             => $feeType,
                             'reserved'             => $reserved,
                             'is_active'            => true,
-                        ]);
+                        ];
 
-                        $generated++;
+                        $activeChallan = $existingChallans->get($consumer->id);
+
+                        if ($activeChallan) {
+                            // Update existing record to prevent duplicates
+                            $activeChallan->update($challanData);
+                            $updated++;
+                        } else {
+                            // Generate unique challan number and create new record
+                            $challanNo = $this->generateUniqueChallanNo();
+                            ActiveChallan::create(array_merge($challanData, [
+                                'consumer_id'          => $consumer->id,
+                                'challan_no'           => $challanNo,
+                                'status'               => 'U',
+                                'tran_auth_id'         => 'J8NTDA',
+                            ]));
+                            $generated++;
+                        }
                     }
                 });
 
             DB::commit();
 
-            Log::info("Bulk Challan Generation completed: {$generated} generated, {$skipped} skipped for {$billingMonth}.");
+            Log::info("Bulk Challan Generation completed: {$generated} generated, {$updated} updated, {$skipped} skipped for {$billingMonth}.");
 
             // Build contextual message
-            if ($generated === 0 && $skipped === 0) {
+            if ($generated === 0 && $updated === 0 && $skipped === 0) {
                 $message = "No active consumers found for {$billingMonth}.";
-            } elseif ($generated === 0) {
-                $message = "No challans generated — {$skipped} consumers skipped (missing fee structure or profile) for {$billingMonth}.";
+            } elseif ($generated === 0 && $updated === 0) {
+                $message = "No challans generated or updated — {$skipped} consumers skipped (missing fee structure or profile) for {$billingMonth}.";
             } else {
-                $message = "{$generated} challans generated, {$skipped} skipped for {$billingMonth}.";
+                $message = "{$generated} challans generated, {$updated} updated, {$skipped} skipped for {$billingMonth}.";
             }
 
             return response()->json([
                 'success' => true,
                 'message' => $message,
                 'generated' => $generated,
+                'updated'   => $updated,
                 'skipped'   => $skipped,
                 'skip_reasons' => $skipReasons,
                 'skipped_details' => array_slice($skippedDetails, 0, 50), // limit to first 50
