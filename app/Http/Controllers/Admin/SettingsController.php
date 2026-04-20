@@ -284,7 +284,7 @@ class SettingsController extends Controller
                             'due_date'             => $dueDate,
                             'amount_base'          => $amountBase,
                             'amount_arrears'       => 0.00,
-                            'amount_within_dueDate' => $amountBase,
+                            'amount_within_dueDate' => $amountBase + 18.00,
                             'amount_after_dueDate'  => $amountBase + 18.00,
                             'fee_type'             => $feeType,
                             'reserved'             => $reserved,
