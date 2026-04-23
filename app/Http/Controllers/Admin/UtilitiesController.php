@@ -102,7 +102,11 @@ class UtilitiesController extends Controller
 
                         $validated = $validator->validated();
 
-                        $validated['consumer_number'] = $validated['s_region_idFk'] . $validated['s_school_idFk'] .   str_pad($validated['s_id'], 6, '0', STR_PAD_LEFT);
+                        $region = str_pad($validated['s_region_idFk'], 2, '0', STR_PAD_LEFT);
+                        $school = str_pad($validated['s_school_idFk'], 3, '0', STR_PAD_LEFT);
+                        $id     = str_pad($validated['s_id'], 6, '0', STR_PAD_LEFT);
+
+                        $validated['consumer_number'] = $region . $school . $id;
 
                         $feeFundCategoryIds = null;
                         if (!empty($validated['fee_category'])) {

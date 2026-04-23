@@ -74,16 +74,47 @@ class PublicChallanController extends Controller
     public function show($challan_no)
     {
         $challan = ActiveChallan::where('challan_no', $challan_no)
-            ->with(['consumer.profileDetails' => function ($q) {
-                $q->where('is_active', true);
-            }])
+            ->with([
+                'consumer.profileDetails' => function ($q) {
+                    $q->where('is_active', true);
+                },
+                'institution',
+                'region',
+                'schoolClass',
+                'level'
+            ])
             ->firstOrFail();
 
         $profile = $challan->consumer->profileDetails->first();
 
-        // Generate QR Code as SVG
-        $qrCode = QrCode::size(100)->generate($challan->consumer->consumer_number);
+        // Generate QR Code as SVG pointing to verification URL
+        $qrCode = QrCode::size(100)->generate(route('challan.verify', ['consumer_number' => $challan->consumer->consumer_number]));
 
         return view('challan.print', compact('challan', 'profile', 'qrCode'));
+    }
+
+    /**
+     * Verify a challan's status.
+     */
+    public function verify($consumerNumber)
+    {
+        $consumer = Consumer::where('consumer_number', $consumerNumber)
+            ->with(['profileDetails' => function ($q) {
+                $q->where('is_active', true);
+            }])
+            ->firstOrFail();
+
+        // Find the most recent challan
+        $challan = ActiveChallan::where('consumer_id', $consumer->id)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$challan) {
+            abort(404, 'No challan found for this consumer.');
+        }
+
+        $profile = $consumer->profileDetails->first();
+
+        return view('challan.verify', compact('challan', 'profile'));
     }
 }

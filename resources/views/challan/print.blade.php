@@ -81,6 +81,37 @@
             z-index: 2;
         }
 
+        /* --- New Diagonal Watermark --- */
+        .diagonal-watermark {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            opacity: 0.04;
+        }
+        .watermark-row {
+            display: flex;
+            justify-content: space-around;
+            width: 150%;
+            transform: rotate(-25deg);
+        }
+        .watermark-item {
+            font-size: 22px;
+            font-weight: 900;
+            white-space: nowrap;
+            padding: 60px; /* Increased padding for vertical spacing */
+            color: #000;
+            letter-spacing: 2px;
+        }
+
         /* --- Challan Copy Styles --- */
         .challan-copy {
             width: 88mm;
@@ -101,6 +132,51 @@
             bottom: 0;
             border-right: 1px dashed #666;
             z-index: 10;
+        }
+
+        .footer {
+            display: none; /* Hide old footer if any */
+        }
+
+        .signature-section {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 20px 5px 5px 5px;
+            position: relative;
+            z-index: 1;
+        }
+        .signature-box {
+            width: 42%;
+            text-align: center;
+        }
+        .signature-line {
+            border-top: 1.5px solid #000;
+            margin-bottom: 4px;
+        }
+        .signature-label {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #000;
+            letter-spacing: 0.5px;
+        }
+        .bank-stamp-area {
+            position: absolute;
+            bottom: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 1px dashed #ccc;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: #999;
+            text-align: center;
+            border-radius: 50%;
         }
 
         .header {
@@ -247,6 +323,15 @@
     @if($challan->status === 'P')
         {{-- PAID RECEIPT FORMAT --}}
         <div class="receipt-card">
+            <div class="diagonal-watermark">
+                @for($i=0; $i<8; $i++)
+                <div class="watermark-row">
+                    @for($j=0; $j<4; $j++)
+                        <span class="watermark-item">{{ $challan->challan_no }}</span>
+                    @endfor
+                </div>
+                @endfor
+            </div>
             <div class="watermark">
                 <img src="{{ asset('assets/logo/logo.png') }}" alt="Watermark" style="width: 400px; opacity: 0.04;">
             </div>
@@ -265,7 +350,7 @@
                 <div class="logo-section">
                     <img src="{{ asset('assets/logo/logo.png') }}" alt="Logo" class="logo">
                     <div>
-                        <h1 class="institution-name">{{ $profile->institution_name ?? 'FGEI (C/G) DIRECTORATE' }}</h1>
+                        <h1 class="institution-name">{{ $challan->institution->name ?? ($profile->institution_name ?? 'FGEI (C/G) DIRECTORATE') }}</h1>
                         <div class="billing-month" style="font-size: 14px; margin-top: 5px;">OFFICIAL PAYMENT RECEIPT</div>
                     </div>
                 </div>
@@ -283,7 +368,9 @@
                 <div class="consumer-info">
                     <div class="consumer-label">Consumer Number</div>
                     <div class="consumer-value">{{ $challan->consumer->consumer_number }}</div>
-                    <div class="consumer-label" style="margin-top: 8px;">Transaction ID / Ref</div>
+                    <div class="consumer-label" style="margin-top: 5px;">1Link PSID</div>
+                    <div class="consumer-value" style="font-size: 15px; color: #007bff;">{{ '11474444' . $challan->institution_id . $challan->consumer->consumer_number }}</div>
+                    <div class="consumer-label" style="margin-top: 5px;">Transaction ID / Ref</div>
                     <div class="consumer-value" style="font-size: 16px; color: #27ae60;">{{ $challan->tran_ref_number ?? 'EPAY-' . $challan->id }}</div>
                 </div>
             </div>
@@ -299,7 +386,7 @@
                 </tr>
                 <tr>
                     <th>Class / Section</th>
-                    <td>{{ $profile->class }} - {{ $profile->section }}</td>
+                    <td>{{ $challan->schoolClass->name ?? $profile->class }} - {{ $profile->section }}</td>
                 </tr>
                 <tr>
                     <th>Challan Number</th>
@@ -334,11 +421,20 @@
 
         @foreach($copies as $copy)
         <div class="challan-copy">
+            <div class="diagonal-watermark">
+                @for($i=0; $i<10; $i++)
+                <div class="watermark-row">
+                    @for($j=0; $j<4; $j++)
+                        <span class="watermark-item">{{ $challan->challan_no }}</span>
+                    @endfor
+                </div>
+                @endfor
+            </div>
             <div class="header">
                 <div class="logo-section">
                     <img src="{{ asset('assets/logo/logo.png') }}" alt="Logo" class="logo" onerror="this.src='https://sis.fgei.gov.pk/assets/images/logo.png'">
                     <div>
-                        <h1 class="institution-name" style="font-size: 12px;">{{ $profile->institution_name ?? 'FGEI (C/G) DIRECTORATE' }}</h1>
+                        <h1 class="institution-name" style="font-size: 12px;">{{ $challan->institution->name ?? ($profile->institution_name ?? 'FGEI (C/G) DIRECTORATE') }}</h1>
                         <div class="billing-month">{{ $billingMonth }}</div>
                     </div>
                 </div>
@@ -352,39 +448,36 @@
                 <div class="consumer-info">
                     <div class="consumer-label">Consumer Number</div>
                     <div class="consumer-value">{{ $challan->consumer->consumer_number }}</div>
-                    <div class="consumer-label" style="margin-top: 4px;">Challan No</div>
+                    <div class="consumer-label" style="margin-top: 3px;">Challan No</div>
                     <div class="consumer-value" style="font-size: 11px;">{{ $challan->challan_no }}</div>
+                    <div class="consumer-label" style="margin-top: 3px;">1Link PSID</div>
+                    <div class="consumer-value" style="font-size: 12px; color: #007bff;">{{ '11474444' . $challan->consumer->institution_id . $challan->consumer->consumer_number }}</div>
+                    <div class="consumer-label" style="margin-top: 3px;">Askari App</div>
+                    <div class="consumer-value" style="font-size: 11px;">{{ '447' . $challan->consumer->institution_id . $challan->consumer->consumer_number }}</div>
                 </div>
-            </div>
-
-            <div style="background: #f9f9f9; padding: 5px; border-radius: 4px; font-size: 9px; margin-bottom: 8px; border: 1px solid #ddd;">
-                <div style="display: flex; justify-content: space-between;"><strong>HBL:</strong> 00427900084303</div>
-                <div style="display: flex; justify-content: space-between;"><strong>UBL:</strong> 225592551 (MCA)</div>
             </div>
 
             <table class="details-table" style="font-size: 9px; margin: 5px 0;">
                 <tr><th>Student</th><td>{{ $profile->name }}</td></tr>
-                <tr><th>Class</th><td>{{ $profile->class }}</td></tr>
+                <tr><th>Class</th><td>{{ $challan->schoolClass->name ?? $profile->class }}</td></tr>
                 <tr><th>Due Date</th><td style="color: red;">{{ $challan->due_date->format('d-M-Y') }}</td></tr>
                 <tr><th>Payable</th><td style="font-weight: 900; font-size: 12px;">Rs. {{ number_format($challan->amount_within_dueDate, 0) }}/-</td></tr>
-                <tr><th>After Due</th><td>Rs. {{ number_format($challan->amount_after_dueDate, 0) }}/-</td></tr>
             </table>
 
-            <div style="font-size: 8px; font-style: italic; margin-top: 5px;">
+            <div style="font-size: 10px; font-style: italic; margin-top: 5px;">
                 <strong>In Words:</strong> {{ \App\Helpers\NumberHelper::amountInWords($challan->amount_within_dueDate) }}
             </div>
 
-            <div style="margin-top: 10px; padding: 4px; border: 1px solid #007bff44; background: #f0f7ff; border-radius: 4px; font-size: 8px;">
-                <strong>1Link Payment:</strong> Use Consumer No. in Bank App
-            </div>
-
-            <div style="font-size: 8px; color: #d00; font-weight: 700; text-align: center; margin: 10px 0;">
-                KEEP THIS COPY SECURE
-            </div>
-
-            <div class="footer">
-                <div style="width: 45%; border-top: 1px solid #000; text-align: center; font-size: 9px;">Officer</div>
-                <div style="width: 45%; border-top: 1px solid #000; text-align: center; font-size: 9px;">Depositor</div>
+            <div class="signature-section">
+                <div class="bank-stamp-area">Bank Stamp</div>
+                <div class="signature-box">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Officer Signature</div>
+                </div>
+                <div class="signature-box">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Depositor Signature</div>
+                </div>
             </div>
         </div>
         @endforeach

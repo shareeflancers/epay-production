@@ -279,6 +279,8 @@ class SettingsController extends Controller
                             . "Base Amount: {$amountBase} | "
                             . "Due Date: {$dueDate}";
 
+                        $firstStructure = $feeStructures->first();
+
                         // Prepare challan data
                         $challanData = [
                             'due_date'             => $dueDate,
@@ -288,6 +290,18 @@ class SettingsController extends Controller
                             'amount_after_dueDate'  => $amountBase,
                             'fee_type'             => $feeType,
                             'reserved'             => $reserved,
+                            'institution_id'       => $consumer->institution_id,
+                            'region_id'            => $consumer->region_id,
+                            'fee_fund_category_id' => $firstStructure->fee_fund_category_id ?? null,
+                            'fee_fund_head_id'     => $firstStructure->fee_fund_head_id ?? null,
+                            'fee_fund_structure_id' => $firstStructure->id ?? null,
+                            'school_class_id'      => $profile->school_class_id,
+                            'level_id'             => $profile->level_id,
+                            'challan_snapshot'     => json_encode([
+                                'profile' => $profile->toArray(),
+                                'fee_structures' => $feeStructures->toArray(),
+                                'institution' => $consumer->institution ? $consumer->institution->toArray() : null,
+                            ]),
                             'is_active'            => true,
                         ];
 

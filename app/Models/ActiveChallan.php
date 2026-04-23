@@ -36,6 +36,14 @@ class ActiveChallan extends Model
         'date_paid',
         'fee_type',
         'reserved',
+        'institution_id',
+        'region_id',
+        'fee_fund_category_id',
+        'fee_fund_head_id',
+        'fee_fund_structure_id',
+        'school_class_id',
+        'level_id',
+        'challan_snapshot',
         'is_active',
     ];
 
@@ -63,6 +71,62 @@ class ActiveChallan extends Model
     public function consumer(): BelongsTo
     {
         return $this->belongsTo(Consumer::class, 'consumer_id');
+    }
+
+    /**
+     * Get the institution.
+     */
+    public function institution(): BelongsTo
+    {
+        return $this->belongsTo(Institution::class, 'institution_id');
+    }
+
+    /**
+     * Get the region.
+     */
+    public function region(): BelongsTo
+    {
+        return $this->belongsTo(Region::class, 'region_id');
+    }
+
+    /**
+     * Get the fee fund category.
+     */
+    public function feeFundCategory(): BelongsTo
+    {
+        return $this->belongsTo(FeeFundCategory::class, 'fee_fund_category_id');
+    }
+
+    /**
+     * Get the fee fund head.
+     */
+    public function feeFundHead(): BelongsTo
+    {
+        return $this->belongsTo(FeeFundHead::class, 'fee_fund_head_id');
+    }
+
+    /**
+     * Get the fee fund structure.
+     */
+    public function feeFundStructure(): BelongsTo
+    {
+        return $this->belongsTo(FeeFundStructure::class, 'fee_fund_structure_id');
+    }
+
+    /**
+     * Get the school class.
+     */
+    public function schoolClass(): BelongsTo
+    {
+        return $this->belongsTo(SchoolClass::class, 'school_class_id');
+    }
+
+    /**
+     * Get the level.
+     */
+    public function level(): BelongsTo
+    {
+        return $this->belongsTo(Level::class, 'level_id');
     }
 
     /**
@@ -95,6 +159,8 @@ class ActiveChallan extends Model
             'date_paid'            => $this->date_paid,
             'tran_auth_id'         => $this->tran_auth_id,
             'reserved'             => $this->reserved,
+            'institution_id'       => $this->institution_id,
+            'region_id'            => $this->region_id,
         ]);
     }
 
