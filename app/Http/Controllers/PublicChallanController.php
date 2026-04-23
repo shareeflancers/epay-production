@@ -22,9 +22,7 @@ class PublicChallanController extends Controller
         }
 
         $consumer = Consumer::where('consumer_number', $consumerNumber)
-            ->with(['activeChallans' => function ($q) {
-                $q->where('status', 'U')->orderBy('due_date', 'desc');
-            }, 'profileDetails' => function ($q) {
+            ->with(['profileDetails' => function ($q) {
                 $q->where('is_active', true);
             }])
             ->first();
@@ -33,10 +31,27 @@ class PublicChallanController extends Controller
             return response()->json(['success' => false, 'message' => 'Consumer not found.'], 404);
         }
 
-        $challan = $consumer->activeChallans->first();
+        // 1. Try to find an unpaid challan first
+        $challan = ActiveChallan::where('consumer_id', $consumer->id)
+            ->where('status', 'U')
+            ->orderBy('due_date', 'desc')
+            ->first();
+
+        // 2. If no unpaid challan, look for the most recent paid one
+        $isPaid = false;
+        if (!$challan) {
+            $challan = ActiveChallan::where('consumer_id', $consumer->id)
+                ->where('status', 'P')
+                ->orderBy('updated_at', 'desc')
+                ->first();
+
+            if ($challan) {
+                $isPaid = true;
+            }
+        }
 
         if (!$challan) {
-            return response()->json(['success' => false, 'message' => 'No active/unpaid challan found for this consumer.'], 404);
+            return response()->json(['success' => false, 'message' => 'No challan history found for this consumer.'], 404);
         }
 
         return response()->json([
@@ -46,6 +61,8 @@ class PublicChallanController extends Controller
                 'name' => $consumer->profileDetails->first()->name ?? 'N/A',
                 'amount' => $challan->amount_within_dueDate,
                 'due_date' => $challan->due_date->format('Y-m-d'),
+                'status' => $challan->status,
+                'is_paid' => $isPaid,
                 'view_url' => route('challan.view', ['challan_no' => $challan->challan_no]),
             ]
         ]);
