@@ -176,7 +176,7 @@ class SettingsController extends Controller
         $dueDate = $now->copy()->day(20)->format('Y-m-d');
         $billingMonth = $now->format('F Y'); // e.g. "February 2026"
 
-        // region_id is now directly on consumer; level_id comes via institution
+        // region_id is now directly on consumer; school_class_id comes via student profile
 
         $generated = 0;
         $updated = 0;
@@ -226,9 +226,9 @@ class SettingsController extends Controller
 
                         $categoryIds = $profile->fee_fund_category_ids;
 
-                        // region_id directly from consumer, level_id from institution
+                        // region_id directly from consumer, school_class_id from student profile
                         $regionId = $consumer->region_id ?? null;
-                        $levelId  = $consumer->institution->level_id ?? null;
+                        $schoolClassId  = $profile->school_class_id ?? null;
 
                         if (!$consumer->institution) {
                             $skipped++;
@@ -243,8 +243,8 @@ class SettingsController extends Controller
                         if ($regionId) {
                             $query->where('region_id', $regionId);
                         }
-                        if ($levelId) {
-                            $query->where('level_id', $levelId);
+                        if ($schoolClassId) {
+                            $query->where('school_class_id', $schoolClassId);
                         }
 
                         $feeStructures = $query->get();
@@ -252,7 +252,7 @@ class SettingsController extends Controller
                         if ($feeStructures->isEmpty()) {
                             $skipped++;
                             $skipReasons['no_fee_structure']++;
-                            $skippedDetails[] = "Consumer #{$consumer->id} ({$consumer->consumer_number}): No fee structure found (region_id: {$regionId}, level_id: {$levelId}, categories: " . implode(',', $categoryIds) . ")";
+                            $skippedDetails[] = "Consumer #{$consumer->id} ({$consumer->consumer_number}): No fee structure found (region_id: {$regionId}, school_class_id: {$schoolClassId}, categories: " . implode(',', $categoryIds) . ")";
                             continue;
                         }
 
@@ -273,7 +273,7 @@ class SettingsController extends Controller
                             . "Type: {$consumer->consumer_type} | "
                             . "Name: {$profile->name} | "
                             . "Region: {$profile->region_name} | "
-                            . "Level: {$profile->institution_level} | "
+                            . "Class: {$profile->class} | "
                             . "Categories: {$categoryTitles} | "
                             . "Fee Type: {$feeType} | "
                             . "Base Amount: {$amountBase} | "
