@@ -364,6 +364,7 @@
             <div class="qr-section">
                 <div class="qr-code">
                     {!! $qrCode !!}
+                    <div style="font-size: 8px; font-weight: 800; margin-top: 5px; text-align: center; color: #444; line-height: 1;">SCAN TO VERIFY<br>STATUS</div>
                 </div>
                 <div class="consumer-info">
                     <div class="consumer-label">Consumer Number</div>
@@ -444,6 +445,7 @@
             <div class="qr-section">
                 <div class="qr-code">
                     {!! $qrCode !!}
+                    <div style="font-size: 7px; font-weight: 800; margin-top: 4px; text-align: center; color: #000; line-height: 1;">SCAN TO CHECK<br>PAYMENT STATUS</div>
                 </div>
                 <div class="consumer-info">
                     <div class="consumer-label">Consumer Number</div>

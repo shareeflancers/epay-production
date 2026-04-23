@@ -265,6 +265,7 @@
             <div class="top-info">
                 <div class="qr-code">
                     {!! QrCode::size(120)->generate(route('challan.verify', ['consumer_number' => $challan->consumer->consumer_number])) !!}
+                    <div style="font-size: 9px; font-weight: 800; text-align: center; margin-top: 8px; color: #666;">SCAN TO VERIFY STATUS</div>
                 </div>
                 <div class="id-section">
                     <div class="id-group">
