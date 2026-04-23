@@ -257,7 +257,7 @@ class SettingsController extends Controller
                         }
 
                         // Calculate amount_base = sum of all matching fee structure totals
-                        $amountBase = $feeStructures->sum('total') + 18.00;
+                        $amountBase = $feeStructures->sum('total');
 
                         // Determine fee_type based on consumer_type
                         $feeType = in_array($consumer->consumer_type, ['student', 'inductee']) ? 'fee' : 'voucher';
