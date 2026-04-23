@@ -60,6 +60,8 @@ class OneLinkHelper
         return [
             'response_Code'         => '00',
             'consumer_Detail'       => $params['consumer_name'] ?? 'Student',
+            'institution_id'        => $params['institution_id'] ?? '',
+            'region_id'             => $params['region_id'] ?? '',
             'bill_status'           => $params['status'] ?? 'U',
             'due_date'              => self::formatDate($params['due_date'] ?? null),
             'amount_within_dueDate' => self::formatAmount($params['amount_within_dueDate'] ?? 0),
