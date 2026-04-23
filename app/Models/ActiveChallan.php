@@ -132,10 +132,12 @@ class ActiveChallan extends Model
     /**
      * Get the transaction ledger histories.
      */
+    /*
     public function transactionLedgerHistories(): HasMany
     {
         return $this->hasMany(ChallanTransactionLedgerHistory::class, 'challan_id');
     }
+    */
 
     /*
     |--------------------------------------------------------------------------

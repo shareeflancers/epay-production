@@ -154,10 +154,10 @@ export default function Welcome() {
                             <Stack gap="xl">
                                 <Box>
                                     <Text size="sm" fw={700} c="dimmed" tt="uppercase" ls="0.05em" mb={10} ml={5}>
-                                        Enter Consumer Number
+                                        Enter Consumer Number or B-Form/CNIC
                                     </Text>
                                     <TextInput
-                                        placeholder="e.g. 66100123456"
+                                        placeholder="e.g. 66100123456 or 3740512345678"
                                         size="xl"
                                         radius="xl"
                                         value={consumerNumber}

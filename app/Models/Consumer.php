@@ -72,8 +72,10 @@ class Consumer extends Model
     /**
      * Get the transaction ledger histories for this consumer.
      */
+    /*
     public function transactionLedgerHistories(): HasMany
     {
         return $this->hasMany(ChallanTransactionLedgerHistory::class, 'consumer_id');
     }
+    */
 }

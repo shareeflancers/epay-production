@@ -22,6 +22,7 @@ class PublicChallanController extends Controller
         }
 
         $consumer = Consumer::where('consumer_number', $consumerNumber)
+            ->orWhere('identification_number', $consumerNumber)
             ->with(['profileDetails' => function ($q) {
                 $q->where('is_active', true);
             }])
@@ -98,7 +99,10 @@ class PublicChallanController extends Controller
      */
     public function verify($consumerNumber)
     {
-        $consumer = Consumer::where('consumer_number', $consumerNumber)
+        $consumer = Consumer::where(function($q) use ($consumerNumber) {
+                $q->where('consumer_number', $consumerNumber)
+                  ->orWhere('identification_number', $consumerNumber);
+            })
             ->with(['profileDetails' => function ($q) {
                 $q->where('is_active', true);
             }])
