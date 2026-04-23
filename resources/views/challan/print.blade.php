@@ -451,7 +451,7 @@
                     <div class="consumer-label" style="margin-top: 3px;">Challan No</div>
                     <div class="consumer-value" style="font-size: 11px;">{{ $challan->challan_no }}</div>
                     <div class="consumer-label" style="margin-top: 3px;">1Link PSID</div>
-                    <div class="consumer-value" style="font-size: 12px; color: #007bff;">{{ '11474444' . $challan->consumer->institution_id . $challan->consumer->consumer_number }}</div>
+                    <div class="consumer-value" style="font-size: 12px; color: #007bff;">{{ '111787474' . $challan->consumer->institution_id . $challan->consumer->consumer_number }}</div>
                     <div class="consumer-label" style="margin-top: 3px;">Askari App</div>
                     <div class="consumer-value" style="font-size: 11px;">{{ '447' . $challan->consumer->institution_id . $challan->consumer->consumer_number }}</div>
                 </div>

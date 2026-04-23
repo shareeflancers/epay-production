@@ -3,183 +3,326 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Challan Verification - {{ $challan->challan_no }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <title>Payment Verification - {{ $challan->challan_no }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #0061ff;
-            --secondary: #60efff;
-            --success: #00c853;
-            --warning: #ffab00;
-            --dark: #1a1a1a;
-            --bg: #f8fafc;
-        }
         body {
-            font-family: 'Outfit', sans-serif;
-            background: var(--bg);
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
             margin: 0;
-            padding: 20px;
+            padding: 40px 20px;
             display: flex;
             justify-content: center;
-            align-items: center;
             min-height: 100vh;
-            color: var(--dark);
         }
-        .card {
+
+        .receipt-container {
             background: white;
             width: 100%;
-            max-width: 450px;
-            border-radius: 24px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.05);
-            padding: 30px;
+            max-width: 800px;
+            border: 2px solid #28a745;
+            border-radius: 40px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             position: relative;
             overflow: hidden;
+            box-sizing: border-box;
         }
+
+        /* Watermark Background */
+        .watermark-container {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            transform: rotate(-25deg);
+            z-index: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            opacity: 0.04;
+        }
+
+        .watermark-row {
+            display: flex;
+            justify-content: space-around;
+            white-space: nowrap;
+            font-size: 24px;
+            font-weight: 800;
+            color: #000;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+
         .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 20px;
             text-align: center;
-            margin-bottom: 25px;
         }
+
         .logo {
-            width: 70px;
-            margin-bottom: 15px;
+            width: 80px;
+            height: auto;
         }
-        .title {
-            font-size: 20px;
-            font-weight: 800;
+
+        .header-text h1 {
             margin: 0;
-            color: #333;
-            text-transform: uppercase;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 10px 25px;
-            border-radius: 50px;
-            font-weight: 800;
             font-size: 18px;
-            margin: 20px 0;
+            font-weight: 800;
+            color: #000;
             text-transform: uppercase;
-            letter-spacing: 1px;
         }
-        .status-paid {
-            background: #e8f5e9;
-            color: #2e7d32;
-            border: 2px solid #2e7d32;
-        }
-        .status-unpaid {
-            background: #fff8e1;
-            color: #f57f17;
-            border: 2px solid #f57f17;
-        }
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
-            margin-top: 20px;
-            background: #f1f5f9;
-            padding: 20px;
-            border-radius: 16px;
-        }
-        .info-item label {
-            display: block;
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-        .info-item span {
+
+        .header-text p {
+            margin: 5px 0 0;
             font-size: 16px;
             font-weight: 700;
-            color: #1e293b;
+            color: #000;
         }
-        .action-btn {
-            display: block;
-            width: 100%;
+
+        .success-banner {
+            background-color: #e8f5e9;
+            border-radius: 10px;
             padding: 15px;
-            border-radius: 12px;
-            border: none;
-            font-size: 16px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .success-banner h2 {
+            margin: 0;
+            color: #2e7d32;
+            font-size: 24px;
             font-weight: 700;
-            cursor: pointer;
-            text-decoration: none;
-            text-align: center;
-            margin-top: 25px;
-            transition: all 0.3s ease;
         }
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            box-shadow: 0 10px 20px rgba(0, 97, 255, 0.2);
+
+        .success-banner p {
+            margin: 5px 0 0;
+            color: #2e7d32;
+            font-size: 18px;
         }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 25px rgba(0, 97, 255, 0.3);
+
+        .top-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
         }
+
+        .qr-code {
+            width: 140px;
+            height: 140px;
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .id-section {
+            text-align: right;
+        }
+
+        .id-group {
+            margin-bottom: 10px;
+        }
+
+        .id-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .id-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: #000;
+        }
+
+        .id-value.psid {
+            color: #0061ff;
+            font-size: 16px;
+        }
+
+        .id-value.ref {
+            color: #28a745;
+        }
+
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            border: 1.5px solid #000;
+        }
+
+        .details-table th, .details-table td {
+            border: 1px solid #000;
+            padding: 12px 15px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .details-table th {
+            background-color: #f8f9fa;
+            width: 35%;
+            font-weight: 700;
+        }
+
+        .details-table td {
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .amount-cell {
+            font-size: 24px !important;
+            font-weight: 800 !important;
+            color: #28a745;
+        }
+
         .footer {
-            margin-top: 20px;
             text-align: center;
-            font-size: 12px;
-            color: #94a3b8;
+            margin-top: 40px;
+        }
+
+        .footer p {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0;
+        }
+
+        .footer .portal-text {
+            font-style: italic;
+            font-weight: 600;
+            margin-top: 15px;
+        }
+
+        .paid-stamp {
+            position: absolute;
+            bottom: 40px;
+            right: 60px;
+            border: 4px solid #28a745;
+            color: #28a745;
+            font-size: 40px;
+            font-weight: 900;
+            padding: 5px 20px;
+            border-radius: 15px;
+            transform: rotate(-15deg);
+            opacity: 0.8;
+            pointer-events: none;
+            background: white;
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.1);
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .receipt-container { padding: 20px; border-radius: 20px; }
+            .top-info { flex-direction: column; align-items: center; text-align: center; }
+            .id-section { text-align: center; margin-top: 20px; }
+            .amount-cell { font-size: 20px !important; }
+            .paid-stamp { position: static; transform: none; margin: 20px auto; display: table; }
         }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div class="header">
-            <img src="{{ asset('assets/logo/logo.png') }}" class="logo" alt="Logo">
-            <h1 class="title">Payment Verification</h1>
-        </div>
-
-        <div style="text-align: center;">
-            @if($challan->status === 'P')
-                <div class="status-badge status-paid">✓ Paid</div>
-            @else
-                <div class="status-badge status-unpaid">! Unpaid</div>
-            @endif
-        </div>
-
-        <div class="info-grid">
-            <div class="info-item">
-                <label>Student Name</label>
-                <span>{{ $profile->name }}</span>
-            </div>
-            <div class="info-item">
-                <label>Institution</label>
-                <span>{{ $challan->institution->name ?? ($profile->institution_name ?? 'FGEI Directorate') }}</span>
-            </div>
-            <div class="info-item">
-                <label>Challan Number</label>
-                <span>{{ $challan->challan_no }}</span>
-            </div>
-            <div class="info-item">
-                <label>Consumer Number</label>
-                <span>{{ $challan->consumer->consumer_number }}</span>
-            </div>
-            <div class="info-item">
-                <label>Amount</label>
-                <span>Rs. {{ number_format($challan->amount_within_dueDate, 0) }}/-</span>
-            </div>
-            @if($challan->status === 'P')
-                <div class="info-item">
-                    <label>Payment Date</label>
-                    <span>{{ $challan->date_paid ? \Carbon\Carbon::parse($challan->date_paid)->format('d-M-Y H:i') : $challan->updated_at->format('d-M-Y H:i') }}</span>
+    <div class="receipt-container">
+        <!-- Repeating Watermark Background -->
+        <div class="watermark-container">
+            @for ($i = 0; $i < 15; $i++)
+                <div class="watermark-row">
+                    @for ($j = 0; $j < 8; $j++)
+                        <span>{{ $challan->challan_no }} • REF{{ $challan->tran_auth_id }}</span>
+                        <span style="width: 100px;"></span>
+                    @endfor
                 </div>
-            @endif
+            @endfor
         </div>
 
-        @if($challan->status === 'P')
-            <a href="{{ route('challan.view', ['challan_no' => $challan->challan_no]) }}" class="action-btn btn-primary">
-                Download Official Receipt
-            </a>
-        @else
-            <a href="{{ route('challan.view', ['challan_no' => $challan->challan_no]) }}" class="action-btn btn-primary">
-                View & Print Challan Form
-            </a>
-        @endif
+        <div class="content">
+            <div class="header">
+                <img src="{{ asset('assets/logo/logo.png') }}" class="logo" alt="Logo" onerror="this.src='https://sis.fgei.gov.pk/assets/images/logo.png'">
+                <div class="header-text">
+                    <h1>{{ $challan->institution->name ?? ($profile->institution_name ?? 'FGEI (C/G) DIRECTORATE') }}</h1>
+                    <p>OFFICIAL PAYMENT RECEIPT</p>
+                </div>
+            </div>
 
-        <div class="footer">
-            &copy; {{ date('Y') }} FGEI (C/G) Directorate. All rights reserved.<br>
-            Computer generated verification record.
+            <div class="success-banner">
+                @if($challan->status === 'P')
+                    <h2>Payment Successful!</h2>
+                    <p>This challan has been paid and verified by the system.</p>
+                @else
+                    <h2 style="color: #f57f17;">Payment Pending</h2>
+                    <p style="color: #f57f17;">This challan is currently awaiting payment.</p>
+                @endif
+            </div>
+
+            <div class="top-info">
+                <div class="qr-code">
+                    {!! QrCode::size(120)->generate(route('challan.verify', ['consumer_number' => $challan->consumer->consumer_number])) !!}
+                </div>
+                <div class="id-section">
+                    <div class="id-group">
+                        <div class="id-label">Consumer Number</div>
+                        <div class="id-value">{{ $challan->consumer->consumer_number }}</div>
+                    </div>
+                    <div class="id-group">
+                        <div class="id-label">1Link PSID</div>
+                        <div class="id-value psid">111787474{{ $challan->institution_id }}{{ $challan->consumer->consumer_number }}</div>
+                    </div>
+                    @if($challan->status === 'P')
+                        <div class="id-group">
+                            <div class="id-label">Transaction ID / REF</div>
+                            <div class="id-value ref">{{ $challan->tran_auth_id }}</div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <table class="details-table">
+                <tr>
+                    <th>Student Name</th>
+                    <td>{{ $profile->name }}</td>
+                </tr>
+                <tr>
+                    <th>Father Name</th>
+                    <td>{{ $profile->father_or_guardian_name }}</td>
+                </tr>
+                <tr>
+                    <th>Class / Section</th>
+                    <td>{{ $challan->schoolClass->name ?? $profile->class }} - {{ $profile->section }}</td>
+                </tr>
+                <tr>
+                    <th>Challan Number</th>
+                    <td>{{ $challan->challan_no }}</td>
+                </tr>
+                <tr>
+                    <th>Amount Paid</th>
+                    <td class="amount-cell">Rs. {{ number_format($challan->amount_within_dueDate, 0) }}/-</td>
+                </tr>
+                <tr>
+                    <th>Payment Date</th>
+                    <td>{{ $challan->date_paid ? \Carbon\Carbon::parse($challan->date_paid)->format('d-M-Y H:i') : ($challan->status === 'P' ? $challan->updated_at->format('d-M-Y H:i') : '-') }}</td>
+                </tr>
+                <tr>
+                    <th>Payment Method</th>
+                    <td>{{ $challan->bank_mnemonic ?? '1LINK / BRANCHLESS' }}</td>
+                </tr>
+            </table>
+
+            <div class="footer">
+                <p>This is a computer generated receipt and does not require a physical signature.</p>
+                <p class="portal-text">FGEI e-Portal - Empowering Education through Technology</p>
+            </div>
+
+            @if($challan->status === 'P')
+                <div class="paid-stamp">PAID</div>
+            @endif
         </div>
     </div>
 </body>
