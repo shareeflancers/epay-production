@@ -21,6 +21,7 @@ Route::get('/', function () {
 
 Route::get('/challan/search', [\App\Http\Controllers\PublicChallanController::class, 'search'])->name('challan.search');
 Route::get('/challan/view/{challan_no}', [\App\Http\Controllers\PublicChallanController::class, 'show'])->name('challan.view');
+Route::get('/challan/verify/{consumer_number}', [\App\Http\Controllers\PublicChallanController::class, 'verify'])->name('challan.verify');
 
 // Authentication routes
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
