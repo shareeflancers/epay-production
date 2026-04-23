@@ -11,6 +11,8 @@ use Illuminate\Encryption\Encrypter;
 use App\Models\Consumer;
 use App\Models\ProfileDetail;
 use App\Models\FeeFundCategory;
+use App\Models\Level;
+use App\Models\SchoolClass;
 
 class UtilitiesController extends Controller
 {
@@ -69,6 +71,10 @@ class UtilitiesController extends Controller
 
                     $validCategoryIds = FeeFundCategory::pluck('id')->toArray();
 
+                    // Pre-fetch levels and classes for faster lookup
+                    $levelsMap = Level::pluck('id', 'level')->toArray();
+                    $classesMap = SchoolClass::pluck('id', 'name')->toArray();
+
                     foreach ($decryptedData as $decrypted) {
                         $validator = Validator::make((array) $decrypted, [
                             's_id' => 'required|integer|digits_between:1,6',
@@ -111,6 +117,22 @@ class UtilitiesController extends Controller
                             }
                         }
 
+                        // Map Level
+                        $levelName = $validated['educational_level'];
+                        if (!isset($levelsMap[$levelName])) {
+                            $newLevel = Level::create(['level' => $levelName, 'display_order' => count($levelsMap) + 1]);
+                            $levelsMap[$levelName] = $newLevel->id;
+                        }
+                        $levelId = $levelsMap[$levelName];
+
+                        // Map Class
+                        $className = $validated['class_name'];
+                        if (!isset($classesMap[$className])) {
+                            $newClass = SchoolClass::create(['name' => $className, 'display_order' => count($classesMap) + 1]);
+                            $classesMap[$className] = $newClass->id;
+                        }
+                        $classId = $classesMap[$className];
+
                         // 1. Process Consumer
                         $consumer = Consumer::firstOrNew(['identification_number' => $validated['std_form_b']]);
                         $consumer->fill([
@@ -136,7 +158,9 @@ class UtilitiesController extends Controller
                             'region_name' => $validated['region_name'],
                             'institution_name' => $validated['institution_name'],
                             'institution_level' => $validated['educational_level'],
+                            'level_id' => $levelId,
                             'class' => $validated['class_name'],
+                            'school_class_id' => $classId,
                             'section' => $validated['section_name'],
                             'fee_fund_category_ids' => $feeFundCategoryIds,
                             'is_active' => 1,

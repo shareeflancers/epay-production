@@ -20,6 +20,7 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useTheme } from '../theme';
+import axios from 'axios';
 
 // Icons as simple SVG components
 const RocketIcon = () => (
@@ -85,6 +86,35 @@ export default function Welcome() {
     const applyCustomColor = () => {
         setColor(customColor);
         close();
+    };
+
+    const [consumerNumber, setConsumerNumber] = useState('');
+    const [searching, setSearching] = useState(false);
+    const [searchResult, setSearchResult] = useState(null);
+    const [error, setError] = useState('');
+
+    const handleSearch = async () => {
+        if (!consumerNumber) {
+            setError('Please enter a consumer number');
+            return;
+        }
+
+        setSearching(true);
+        setError('');
+        setSearchResult(null);
+
+        try {
+            const response = await axios.get('/challan/search', {
+                params: { consumer_number: consumerNumber }
+            });
+            if (response.data.success) {
+                setSearchResult(response.data.data);
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to find challan. Please check the number.');
+        } finally {
+            setSearching(false);
+        }
     };
 
     return (
@@ -326,48 +356,170 @@ export default function Welcome() {
                         ))}
                     </SimpleGrid>
 
-                    {/* Theme Demo Section */}
+                    {/* Find Your Challan Section */}
                     <Card
-                        shadow="md"
-                        padding="lg"
-                        radius="md"
+                        id="find-challan"
+                        shadow="xl"
+                        padding="xl"
+                        radius="lg"
                         style={{
                             background: ui.cardBg,
-                            backdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            backdropFilter: 'blur(20px)',
+                            border: `2px solid ${gradient.from}44`,
                             textAlign: 'center',
-                            maxWidth: 600,
+                            maxWidth: 800,
                             width: '100%',
+                            marginTop: 40,
+                            position: 'relative',
+                            overflow: 'hidden',
                         }}
                     >
-                        <Stack gap="sm">
-                            <Text fw={700} size="lg">
-                                🎨 Theme System Ready
-                            </Text>
-                            <Text size="sm" c="dimmed">
-                                Current color:{' '}
-                                <Badge
-                                    variant="light"
+                        <Box
+                           style={{
+                               position: 'absolute',
+                               top: 0,
+                               left: 0,
+                               width: '100%',
+                               height: 4,
+                               background: `linear-gradient(90deg, ${gradient.from}, ${gradient.to})`
+                           }}
+                        />
+
+                            <Stack gap="lg">
+                                <Title order={2} style={{ fontWeight: 800 }}>
+                                    📑 Find Your Challan
+                                </Title>
+                                <Text c="dimmed">
+                                    Enter your consumer number below to find and generate your fee challan form.
+                                </Text>
+
+                                <Group grow align="flex-end">
+                                    <Box style={{ textAlign: 'left' }}>
+                                        <Text size="sm" fw={500} mb={5}>Consumer Number</Text>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. 12345678"
+                                            value={consumerNumber}
+                                            onChange={(e) => setConsumerNumber(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px 16px',
+                                                borderRadius: '12px',
+                                                border: '2px solid rgba(0,0,0,0.05)',
+                                                background: 'rgba(255,255,255,0.8)',
+                                                outline: 'none',
+                                                fontSize: '16px',
+                                                transition: 'all 0.2s ease',
+                                                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+                                            }}
+                                            onFocus={(e) => {
+                                                e.target.style.borderColor = gradient.from;
+                                                e.target.style.boxShadow = `0 0 0 4px ${gradient.from}22`;
+                                            }}
+                                            onBlur={(e) => {
+                                                e.target.style.borderColor = 'rgba(0,0,0,0.05)';
+                                                e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)';
+                                            }}
+                                        />
+                                    </Box>
+                                    <Button
+                                        size="lg"
+                                        variant="gradient"
+                                        gradient={{ from: gradient.from, to: gradient.to }}
+                                        radius="md"
+                                        onClick={handleSearch}
+                                        loading={searching}
+                                        style={{ height: 48 }}
+                                    >
+                                        Search Challan
+                                    </Button>
+                                </Group>
+
+                                {error && (
+                                    <Text c="red" size="sm" fw={600}>
+                                        ⚠️ {error}
+                                    </Text>
+                                )}
+
+                                {searchResult && (
+                                    <Card padding="xl" radius="md" withBorder style={{ backgroundColor: 'rgba(255,255,255,0.5)', borderStyle: 'dashed' }}>
+                                        <Stack gap="md" align="center">
+                                            <Badge size="lg" variant="light" color="green">Challan Found!</Badge>
+                                            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="xl" style={{ width: '100%' }}>
+                                                <Stack gap={0}>
+                                                    <Text size="xs" c="dimmed" tt="uppercase" ls={1} fw={700}>Student Name</Text>
+                                                    <Text fw={600} size="lg">{searchResult.name}</Text>
+                                                </Stack>
+                                                <Stack gap={0}>
+                                                    <Text size="xs" c="dimmed" tt="uppercase" ls={1} fw={700}>Challan No</Text>
+                                                    <Text fw={600} size="lg">{searchResult.challan_no}</Text>
+                                                </Stack>
+                                                <Stack gap={0}>
+                                                    <Text size="xs" c="dimmed" tt="uppercase" ls={1} fw={700}>Amount</Text>
+                                                    <Text fw={800} size="xl" color={gradient.from}>Rs. {searchResult.amount}</Text>
+                                                </Stack>
+                                            </SimpleGrid>
+                                            <Button
+                                                component="a"
+                                                href={searchResult.view_url}
+                                                target="_blank"
+                                                variant="filled"
+                                                color="dark"
+                                                radius="xl"
+                                                size="md"
+                                                mt="md"
+                                                leftSection={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
+                                            >
+                                                Generate Printable Form
+                                            </Button>
+                                        </Stack>
+                                    </Card>
+                                )}
+
+                                {/* Theme Demo Section */}
+                                <Card
+                                    shadow="md"
+                                    padding="lg"
+                                    radius="md"
                                     style={{
-                                        backgroundColor: colorConfig.light,
-                                        color: colorConfig.primary
+                                        background: ui.cardBg,
+                                        backdropFilter: 'blur(10px)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        textAlign: 'center',
+                                        maxWidth: 600,
+                                        width: '100%',
                                     }}
                                 >
-                                    {primaryColor}
-                                </Badge>
-                            </Text>
-                            <Text size="xs" c="dimmed">
-                                Click the color button in the top-right corner to change colors.
-                                Pick from presets or use the color picker for any custom color!
-                            </Text>
-                        </Stack>
-                    </Card>
+                                    <Stack gap="sm">
+                                        <Text fw={700} size="lg">
+                                            🎨 Theme System Ready
+                                        </Text>
+                                        <Text size="sm" c="dimmed">
+                                            Current color:{' '}
+                                            <Badge
+                                                variant="light"
+                                                style={{
+                                                    backgroundColor: colorConfig.light,
+                                                    color: colorConfig.primary
+                                                }}
+                                            >
+                                                {primaryColor}
+                                            </Badge>
+                                        </Text>
+                                        <Text size="xs" c="dimmed">
+                                            Click the color button in the top-right corner to change colors.
+                                            Pick from presets or use the color picker for any custom color!
+                                        </Text>
+                                    </Stack>
+                                </Card>
 
-                    {/* Footer */}
-                    <Text size="sm" c="dimmed" ta="center" mt="xl">
-                        Built with ❤️ using Laravel 12, React 19, Mantine 8, and Tailwind CSS 4
-                    </Text>
-                </Stack>
+                                {/* Footer */}
+                                <Text size="sm" c="dimmed" ta="center" mt="xl">
+                                    Built with ❤️ using Laravel 12, React 19, Mantine 8, and Tailwind CSS 4
+                                </Text>
+                            </Stack>
+                        </Card>
+                    </Stack>
             </Container>
 
             <style>{`

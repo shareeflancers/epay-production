@@ -13,3 +13,4 @@ export { default as ThemedSelect } from './ThemedSelect';
 export { default as ThemedModal } from './ThemedModal';
 export { default as FetchProgressModal } from './FetchProgressModal';
 export { default as ThemedMultiSelect } from './ThemedMultiSelect';
+export { default as ThemedTagsInput } from './ThemedTagsInput';

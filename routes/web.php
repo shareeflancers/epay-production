@@ -8,6 +8,9 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\FeeStructureController;
 use App\Http\Controllers\Admin\RegionController;
 use App\Http\Controllers\Admin\LevelController;
+use App\Http\Controllers\Admin\ClassController;
+use App\Http\Controllers\Admin\FeeFundHeadController;
+use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -16,8 +19,16 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 });
 
-// Admin routes (authentication can be added later)
-Route::prefix('admin')->group(function () {
+Route::get('/challan/search', [\App\Http\Controllers\PublicChallanController::class, 'search'])->name('challan.search');
+Route::get('/challan/view/{challan_no}', [\App\Http\Controllers\PublicChallanController::class, 'show'])->name('challan.view');
+
+// Authentication routes
+Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [LoginController::class, 'login']);
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+// Admin routes (Protected by auth middleware)
+Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('admin.dashboard');
 
     // Fee Fund Category CRUD
@@ -27,6 +38,14 @@ Route::prefix('admin')->group(function () {
     Route::put('/fee-fund-categories/{feeFundCategory}', [FeeFundCategoryController::class, 'update'])->name('admin.fee-fund-categories.update');
     Route::delete('/fee-fund-categories/{feeFundCategory}', [FeeFundCategoryController::class, 'destroy'])->name('admin.fee-fund-categories.destroy');
     Route::put('/fee-fund-categories/{feeFundCategory}/status', [FeeFundCategoryController::class, 'updateStatus'])->name('admin.fee-fund-categories.update-status');
+
+    // Fee Fund Heads CRUD
+    Route::post('/fee-fund-heads/reorder', [FeeFundHeadController::class, 'reorder'])->name('admin.fee-fund-heads.reorder');
+    Route::get('/fee-fund-heads', [FeeFundHeadController::class, 'index'])->name('admin.fee-fund-heads.index');
+    Route::post('/fee-fund-heads', [FeeFundHeadController::class, 'store'])->name('admin.fee-fund-heads.store');
+    Route::put('/fee-fund-heads/{feeFundHead}', [FeeFundHeadController::class, 'update'])->name('admin.fee-fund-heads.update');
+    Route::delete('/fee-fund-heads/{feeFundHead}', [FeeFundHeadController::class, 'destroy'])->name('admin.fee-fund-heads.destroy');
+    Route::put('/fee-fund-heads/{feeFundHead}/status', [FeeFundHeadController::class, 'updateStatus'])->name('admin.fee-fund-heads.update-status');
 
     // Fee Structure CRUD
     Route::post('/fee-structure/reorder', [FeeStructureController::class, 'reorder'])->name('admin.fee-structure.reorder');
@@ -51,6 +70,14 @@ Route::prefix('admin')->group(function () {
     Route::put('/levels/{level}', [LevelController::class, 'update'])->name('admin.levels.update');
     Route::delete('/levels/{level}', [LevelController::class, 'destroy'])->name('admin.levels.destroy');
     Route::put('/levels/{level}/status', [LevelController::class, 'updateStatus'])->name('admin.levels.update-status');
+
+    // Classes Routes
+    Route::post('/classes/reorder', [ClassController::class, 'reorder'])->name('admin.classes.reorder');
+    Route::get('/classes', [ClassController::class, 'index'])->name('admin.classes.index');
+    Route::post('/classes', [ClassController::class, 'store'])->name('admin.classes.store');
+    Route::put('/classes/{class}', [ClassController::class, 'update'])->name('admin.classes.update');
+    Route::delete('/classes/{class}', [ClassController::class, 'destroy'])->name('admin.classes.destroy');
+    Route::put('/classes/{class}/status', [ClassController::class, 'updateStatus'])->name('admin.classes.update-status');
 
     // Consumers CRUD
     Route::get('/consumers/{type}', [ConsumersController::class, 'index'])->name('admin.consumers.index');

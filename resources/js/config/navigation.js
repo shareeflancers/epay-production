@@ -25,6 +25,11 @@ export const adminNavItems = [
         href: '/admin/fee-fund-categories'
     },
     {
+        label: 'Fee Fund Heads',
+        icon: 'list',
+        href: '/admin/fee-fund-heads'
+    },
+    {
         label: 'Regions',
         icon: 'map',
         href: '/admin/regions'
@@ -33,6 +38,11 @@ export const adminNavItems = [
         label: 'Levels',
         icon: 'stairs',
         href: '/admin/levels'
+    },
+    {
+        label: 'Classes',
+        icon: 'list',
+        href: '/admin/classes'
     },
     {
         label: 'Institutions',

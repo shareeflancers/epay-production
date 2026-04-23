@@ -21,7 +21,7 @@ import {
     ThemedSelect
 } from '../../../Components/UI';
 
-export default function FeeStructureIndex({ structures, categories, regions, levels, filters }) {
+export default function FeeStructureIndex({ structures, categories, regions, classes, headGroups, filters }) {
     const [opened, { open, close }] = useDisclosure(false);
     const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
     const [editingStructure, setEditingStructure] = useState(null);
@@ -49,55 +49,45 @@ export default function FeeStructureIndex({ structures, categories, regions, lev
         }));
     }, [regions]);
 
-    // Prepare level options
-    const levelOptions = useMemo(() => {
-        return levels.map(l => ({
-            value: String(l.id),
-            label: l.level
+    // Prepare class options
+    const classOptions = useMemo(() => {
+        return classes.map(c => ({
+            value: String(c.id),
+            label: c.name
         }));
-    }, [levels]);
+    }, [classes]);
+
+    // Prepare head group options
+    const headGroupOptions = useMemo(() => {
+        return headGroups.map(hg => ({
+            value: String(hg.id),
+            label: hg.head_identifier || hg.fee_head.join(', ')
+        }));
+    }, [headGroups]);
 
     // Form for create/edit
     const { data, setData, post, put, processing, errors, reset } = useForm({
         region_id: '',
-        level_id: '',
+        school_class_id: '',
         fee_fund_category_id: '',
-        admission_fee: 0,
-        slc: 0,
-        tution_fee: 0,
-        idf: 0,
-        exam_fee: 0,
-        it_fee: 0,
-        csf: 0,
-        rdf: 0,
-        cdf: 0,
-        security_fund: 0,
-        bs_fund: 0,
-        prep_fund: 0,
-        donation_fund: 0,
+        fee_fund_head_id: '',
+        fee_head_amounts: {},
         total: 0,
         is_active: true,
     });
 
+    // Find selected head group details
+    const selectedHeadGroup = useMemo(() => {
+        return headGroups.find(hg => String(hg.id) === String(data.fee_fund_head_id));
+    }, [data.fee_fund_head_id, headGroups]);
+
     // Calculate total whenever fee components change
     useEffect(() => {
-        const fees = [
-            'admission_fee', 'slc', 'tution_fee', 'idf', 'exam_fee',
-            'it_fee', 'csf', 'rdf', 'cdf', 'security_fund',
-            'bs_fund', 'prep_fund', 'donation_fund'
-        ];
-
-        const sum = fees.reduce((acc, curr) => acc + (parseFloat(data[curr]) || 0), 0);
-
-        // Only update if total is different to avoid infinite loops if we were listening to total
+        const sum = Object.values(data.fee_head_amounts).reduce((acc, curr) => acc + (parseFloat(curr) || 0), 0);
         if (data.total !== sum) {
             setData(prev => ({ ...prev, total: sum }));
         }
-    }, [
-        data.admission_fee, data.slc, data.tution_fee, data.idf, data.exam_fee,
-        data.it_fee, data.csf, data.rdf, data.cdf, data.security_fund,
-        data.bs_fund, data.prep_fund, data.donation_fund
-    ]);
+    }, [data.fee_head_amounts]);
 
     // Handle add button click
     const handleAdd = () => {
@@ -105,21 +95,10 @@ export default function FeeStructureIndex({ structures, categories, regions, lev
         reset();
         setData({
             region_id: '',
-            level_id: '',
+            school_class_id: '',
             fee_fund_category_id: '',
-            admission_fee: 0,
-            slc: 0,
-            tution_fee: 0,
-            idf: 0,
-            exam_fee: 0,
-            it_fee: 0,
-            csf: 0,
-            rdf: 0,
-            cdf: 0,
-            security_fund: 0,
-            bs_fund: 0,
-            prep_fund: 0,
-            donation_fund: 0,
+            fee_fund_head_id: '',
+            fee_head_amounts: {},
             total: 0,
             is_active: true,
         });
@@ -131,21 +110,10 @@ export default function FeeStructureIndex({ structures, categories, regions, lev
         setEditingStructure(row);
         setData({
             region_id: String(row.region_id || ''),
-            level_id: String(row.level_id || ''),
+            school_class_id: String(row.school_class_id || ''),
             fee_fund_category_id: String(row.fee_fund_category_id || ''),
-            admission_fee: parseFloat(row.admission_fee) || 0,
-            slc: parseFloat(row.slc) || 0,
-            tution_fee: parseFloat(row.tution_fee) || 0,
-            idf: parseFloat(row.idf) || 0,
-            exam_fee: parseFloat(row.exam_fee) || 0,
-            it_fee: parseFloat(row.it_fee) || 0,
-            csf: parseFloat(row.csf) || 0,
-            rdf: parseFloat(row.rdf) || 0,
-            cdf: parseFloat(row.cdf) || 0,
-            security_fund: parseFloat(row.security_fund) || 0,
-            bs_fund: parseFloat(row.bs_fund) || 0,
-            prep_fund: parseFloat(row.prep_fund) || 0,
-            donation_fund: parseFloat(row.donation_fund) || 0,
+            fee_fund_head_id: String(row.fee_fund_head_id || ''),
+            fee_head_amounts: row.fee_head_amounts || {},
             total: parseFloat(row.total) || 0,
             is_active: !!row.is_active,
         });
@@ -213,6 +181,21 @@ export default function FeeStructureIndex({ structures, categories, regions, lev
         });
     };
 
+    // Handle reorder
+    const handleReorder = (newItems) => {
+        setTableData(newItems); // Optimistic update
+        const ids = newItems.map(item => item.id);
+        router.post('/admin/fee-fund-heads/reorder', {
+            ids: ids
+        }, {
+            preserveScroll: true,
+            preserveState: true,
+            onError: () => {
+                setTableData(heads.data);
+            }
+        });
+    };
+
     // Column definitions
     const columns = useMemo(() => [
         {
@@ -222,10 +205,10 @@ export default function FeeStructureIndex({ structures, categories, regions, lev
             render: (_, row) => row.region?.name || '-'
         },
         {
-            key: 'level_name',
-            label: 'Level',
+            key: 'class_name',
+            label: 'Class',
             sortable: true,
-            render: (_, row) => row.level?.level || '-'
+            render: (_, row) => row.schoolClass?.name || row.school_class?.name || '-'
         },
         {
             key: 'category_title',
@@ -235,10 +218,16 @@ export default function FeeStructureIndex({ structures, categories, regions, lev
             render: (_, row) => row.feeFundCategory?.category_title || row.fee_fund_category?.category_title || '-'
         },
         {
+            key: 'fee_fund_head',
+            label: 'Head Group',
+            width: 250,
+            render: (_, row) => row.fee_fund_head?.head_identifier || '-'
+        },
+        {
             key: 'total',
             label: 'Total Fee',
             sortable: true,
-            render: (value) => <Text fw={500}>{parseFloat(value).toLocaleString()}</Text>
+            render: (value) => { let totalFee = parseFloat(value).toLocaleString(); return totalFee; }
         },
         {
             key: 'is_active',
@@ -324,6 +313,7 @@ export default function FeeStructureIndex({ structures, categories, regions, lev
                     onPerPageChange={handlePerPageChange}
                     emptyMessage="No fee structures found"
                     enableExport={true}
+                    onReorder={handleReorder}
                 />
 
                 {/* Create/Edit Modal */}
@@ -351,12 +341,12 @@ export default function FeeStructureIndex({ structures, categories, regions, lev
                                     }}
                                 />
                                 <ThemedSelect
-                                    label="Institution Level"
-                                    placeholder="Select institution level"
-                                    data={levelOptions}
-                                    value={data.level_id}
-                                    onChange={(val) => setData('level_id', val)}
-                                    error={errors.level_id}
+                                    label="Class"
+                                    placeholder="Select class"
+                                    data={classOptions}
+                                    value={data.school_class_id}
+                                    onChange={(val) => setData('school_class_id', val)}
+                                    error={errors.school_class_id}
                                     required
                                     searchable
                                     styles={{
@@ -375,23 +365,50 @@ export default function FeeStructureIndex({ structures, categories, regions, lev
                                 required
                             />
 
-                            <Text fw={600} size="sm" mt="xs">Fee Details</Text>
+                            <ThemedSelect
+                                label="Fee Head Group"
+                                placeholder="Select head group"
+                                data={headGroupOptions}
+                                value={data.fee_fund_head_id}
+                                onChange={(val) => {
+                                    setData(prev => ({
+                                        ...prev,
+                                        fee_fund_head_id: val,
+                                        fee_head_amounts: {} // Reset amounts when group changes
+                                    }));
+                                }}
+                                error={errors.fee_fund_head_id}
+                                required
+                                searchable
+                            />
 
-                            <SimpleGrid cols={3}>
-                                {renderFeeInput('admission_fee', 'Admission Fee')}
-                                {renderFeeInput('tution_fee', 'Tuition Fee')}
-                                {renderFeeInput('slc', 'SLC')}
-                                {renderFeeInput('idf', 'IDF')}
-                                {renderFeeInput('exam_fee', 'Exam Fee')}
-                                {renderFeeInput('it_fee', 'IT Fee')}
-                                {renderFeeInput('csf', 'CSF')}
-                                {renderFeeInput('rdf', 'RDF')}
-                                {renderFeeInput('cdf', 'CDF')}
-                                {renderFeeInput('security_fund', 'Security Fund')}
-                                {renderFeeInput('bs_fund', 'BS Fund')}
-                                {renderFeeInput('prep_fund', 'Prep Fund')}
-                                {renderFeeInput('donation_fund', 'Donation Fund')}
-                            </SimpleGrid>
+                            {selectedHeadGroup && (
+                                <>
+                                    <Text fw={600} size="sm" mt="xs">Fee Details for {selectedHeadGroup.head_identifier || 'Selected Group'}</Text>
+                                    <SimpleGrid cols={3}>
+                                        {selectedHeadGroup.fee_head.map((head) => (
+                                            <ThemedInput
+                                                key={head}
+                                                label={head}
+                                                type="number"
+                                                value={data.fee_head_amounts[head] || 0}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setData(prev => ({
+                                                        ...prev,
+                                                        fee_head_amounts: {
+                                                            ...prev.fee_head_amounts,
+                                                            [head]: val
+                                                        }
+                                                    }));
+                                                }}
+                                                min={0}
+                                                step="0.01"
+                                            />
+                                        ))}
+                                    </SimpleGrid>
+                                </>
+                            )}
 
                             <Group grow>
                                 <ThemedInput
@@ -441,7 +458,7 @@ export default function FeeStructureIndex({ structures, categories, regions, lev
                             Are you sure you want to delete this fee structure?
                         </Text>
                         <Text size="sm" c="dimmed">
-                            Region: {deletingStructure?.region?.name}, Level: {deletingStructure?.level?.level}
+                            Region: {deletingStructure?.region?.name}, Class: {deletingStructure?.schoolClass?.name || deletingStructure?.school_class?.name}
                         </Text>
                         <Group justify="flex-end" mt="md">
                             <ThemedButton themeVariant="subtle" onClick={closeDelete}>

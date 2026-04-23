@@ -257,7 +257,7 @@ class SettingsController extends Controller
                         }
 
                         // Calculate amount_base = sum of all matching fee structure totals
-                        $amountBase = $feeStructures->sum('total');
+                        $amountBase = $feeStructures->sum('total') + 18.00;
 
                         // Determine fee_type based on consumer_type
                         $feeType = in_array($consumer->consumer_type, ['student', 'inductee']) ? 'fee' : 'voucher';
@@ -284,8 +284,8 @@ class SettingsController extends Controller
                             'due_date'             => $dueDate,
                             'amount_base'          => $amountBase,
                             'amount_arrears'       => 0.00,
-                            'amount_within_dueDate' => $amountBase + 18.00,
-                            'amount_after_dueDate'  => $amountBase + 18.00,
+                            'amount_within_dueDate' => $amountBase,
+                            'amount_after_dueDate'  => $amountBase,
                             'fee_type'             => $feeType,
                             'reserved'             => $reserved,
                             'is_active'            => true,

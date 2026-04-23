@@ -49,7 +49,7 @@ class InstitutionController extends Controller
         }
 
         // Pagination
-        $perPage = $request->get('per_page', 10);
+        $perPage = $request->get('per_page', 500);
         $institutions = $query->paginate($perPage)->withQueryString();
 
         // Get regions and levels for dropdowns

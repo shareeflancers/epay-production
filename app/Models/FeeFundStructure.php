@@ -22,21 +22,10 @@ class FeeFundStructure extends Model
      */
     protected $fillable = [
         'region_id',
-        'level_id',
+        'school_class_id',
         'fee_fund_category_id',
-        'admission_fee',
-        'slc',
-        'tution_fee',
-        'idf',
-        'exam_fee',
-        'it_fee',
-        'csf',
-        'rdf',
-        'cdf',
-        'security_fund',
-        'bs_fund',
-        'prep_fund',
-        'donation_fund',
+        'fee_fund_head_id',
+        'fee_head_amounts',
         'total',
         'is_active',
     ];
@@ -49,22 +38,18 @@ class FeeFundStructure extends Model
     protected function casts(): array
     {
         return [
-            'admission_fee' => 'decimal:2',
-            'slc' => 'decimal:2',
-            'tution_fee' => 'decimal:2',
-            'idf' => 'decimal:2',
-            'exam_fee' => 'decimal:2',
-            'it_fee' => 'decimal:2',
-            'csf' => 'decimal:2',
-            'rdf' => 'decimal:2',
-            'cdf' => 'decimal:2',
-            'security_fund' => 'decimal:2',
-            'bs_fund' => 'decimal:2',
-            'prep_fund' => 'decimal:2',
-            'donation_fund' => 'decimal:2',
+            'fee_head_amounts' => 'array',
             'total' => 'decimal:2',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Get the fee fund head group.
+     */
+    public function feeFundHead(): BelongsTo
+    {
+        return $this->belongsTo(FeeFundHead::class, 'fee_fund_head_id');
     }
 
     /**
@@ -84,11 +69,11 @@ class FeeFundStructure extends Model
     }
 
     /**
-     * Get the level.
+     * Get the school class.
      */
-    public function level(): BelongsTo
+    public function schoolClass(): BelongsTo
     {
-        return $this->belongsTo(Level::class);
+        return $this->belongsTo(SchoolClass::class, 'school_class_id');
     }
 
     /**

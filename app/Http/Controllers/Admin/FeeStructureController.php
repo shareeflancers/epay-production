@@ -6,7 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\FeeFundStructure;
 use App\Models\FeeFundCategory;
 use App\Models\Region;
-use App\Models\Level;
+use App\Models\SchoolClass;
+use App\Models\FeeFundHead;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -23,7 +24,7 @@ class FeeStructureController extends Controller
     public function index(Request $request)
     {
         $query = FeeFundStructure::query()
-            ->with(['feeFundCategory:id,category_title', 'region:id,name', 'level:id,level']);
+            ->with(['feeFundCategory:id,category_title', 'region:id,name', 'schoolClass:id,name', 'feeFundHead']);
 
         // Search functionality - search in region, institution_level, and category title
         if ($request->has('search') && $request->search) {
@@ -32,8 +33,8 @@ class FeeStructureController extends Controller
                 $q->whereHas('region', function ($q) use ($search) {
                         $q->where('name', 'like', '%' . $search . '%');
                     })
-                    ->orWhereHas('level', function ($q) use ($search) {
-                        $q->where('level', 'like', '%' . $search . '%');
+                    ->orWhereHas('schoolClass', function ($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%');
                     })
                     ->orWhereHas('feeFundCategory', function ($q) use ($search) {
                         $q->where('category_title', 'like', '%' . $search . '%');
@@ -54,9 +55,9 @@ class FeeStructureController extends Controller
             $query->join('regions', 'fee_fund_structure.region_id', '=', 'regions.id')
                 ->orderBy('regions.name', $sortDirection)
                 ->select('fee_fund_structure.*');
-        } elseif ($sortField === 'level_name' || $sortField === 'institution_level') {
-            $query->join('levels', 'fee_fund_structure.level_id', '=', 'levels.id')
-                ->orderBy('levels.level', $sortDirection)
+        } elseif ($sortField === 'class_name' || $sortField === 'class') {
+            $query->join('school_classes', 'fee_fund_structure.school_class_id', '=', 'school_classes.id')
+                ->orderBy('school_classes.name', $sortDirection)
                 ->select('fee_fund_structure.*');
         } else {
             $query->orderBy($sortField, $sortDirection);
@@ -69,15 +70,17 @@ class FeeStructureController extends Controller
         // Get categories for the form dropdown
         $categories = FeeFundCategory::select('id', 'category_title')->where('is_active', true)->orderBy('display_order')->get();
 
-        // Get regions and levels for dropdowns
+        // Get regions and classes for dropdowns
         $regions = Region::select('id', 'name')->where('is_active', true)->orderBy('display_order')->get();
-        $levels = Level::select('id', 'level')->where('is_active', true)->orderBy('display_order')->get();
+        $classes = SchoolClass::select('id', 'name')->where('is_active', true)->orderBy('display_order')->get();
+        $headGroups = FeeFundHead::select('id', 'head_identifier', 'fee_head')->where('is_active', true)->orderBy('display_order')->get();
 
         return Inertia::render('Admin/FeeStructure/Index', [
             'structures' => $structures,
             'categories' => $categories,
             'regions' => $regions,
-            'levels' => $levels,
+            'classes' => $classes,
+            'headGroups' => $headGroups,
             'filters' => [
                 'search' => $request->search,
                 'sort' => $sortField,
@@ -96,21 +99,10 @@ class FeeStructureController extends Controller
         try {
             $validated = $request->validate([
                 'region_id' => 'required|exists:regions,id',
-                'level_id' => 'required|exists:levels,id',
+                'school_class_id' => 'required|exists:school_classes,id',
                 'fee_fund_category_id' => 'required|exists:fee_fund_category,id',
-                'admission_fee' => 'nullable|numeric|min:0',
-                'slc' => 'nullable|numeric|min:0',
-                'tution_fee' => 'nullable|numeric|min:0',
-                'idf' => 'nullable|numeric|min:0',
-                'exam_fee' => 'nullable|numeric|min:0',
-                'it_fee' => 'nullable|numeric|min:0',
-                'csf' => 'nullable|numeric|min:0',
-                'rdf' => 'nullable|numeric|min:0',
-                'cdf' => 'nullable|numeric|min:0',
-                'security_fund' => 'nullable|numeric|min:0',
-                'bs_fund' => 'nullable|numeric|min:0',
-                'prep_fund' => 'nullable|numeric|min:0',
-                'donation_fund' => 'nullable|numeric|min:0',
+                'fee_fund_head_id' => 'required|exists:fee_fund_heads,id',
+                'fee_head_amounts' => 'required|array',
                 'total' => 'nullable|numeric|min:0',
                 'is_active' => 'boolean',
             ]);
@@ -135,21 +127,10 @@ class FeeStructureController extends Controller
         try {
             $validated = $request->validate([
                 'region_id' => 'required|exists:regions,id',
-                'level_id' => 'required|exists:levels,id',
+                'school_class_id' => 'required|exists:school_classes,id',
                 'fee_fund_category_id' => 'required|exists:fee_fund_category,id',
-                'admission_fee' => 'nullable|numeric|min:0',
-                'slc' => 'nullable|numeric|min:0',
-                'tution_fee' => 'nullable|numeric|min:0',
-                'idf' => 'nullable|numeric|min:0',
-                'exam_fee' => 'nullable|numeric|min:0',
-                'it_fee' => 'nullable|numeric|min:0',
-                'csf' => 'nullable|numeric|min:0',
-                'rdf' => 'nullable|numeric|min:0',
-                'cdf' => 'nullable|numeric|min:0',
-                'security_fund' => 'nullable|numeric|min:0',
-                'bs_fund' => 'nullable|numeric|min:0',
-                'prep_fund' => 'nullable|numeric|min:0',
-                'donation_fund' => 'nullable|numeric|min:0',
+                'fee_fund_head_id' => 'required|exists:fee_fund_heads,id',
+                'fee_head_amounts' => 'required|array',
                 'total' => 'nullable|numeric|min:0',
                 'is_active' => 'boolean',
             ]);
