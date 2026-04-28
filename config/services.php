@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'onelink' => [
+        'username' => env('API_USERNAME'),
+        'password' => env('API_PASSWORD'),
+    ],
+
 ];
