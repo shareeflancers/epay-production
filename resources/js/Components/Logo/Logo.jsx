@@ -20,23 +20,26 @@ export default function Logo({ collapsed = false, size = 'md' }) {
 
     const currentSize = sizes[size] || sizes.md;
 
-    // Logo Icon - just the F letter with gradient
+    // Logo Icon - Actual FGEI Logo
     const LogoIcon = () => (
         <Box
             style={{
                 width: currentSize.icon,
                 height: currentSize.icon,
-                borderRadius: 8,
-                background: `linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'white',
-                fontWeight: 900,
-                fontSize: currentSize.fontSize,
             }}
         >
-            E
+            <img 
+                src="/assets/logo/logo.png" 
+                alt="FGEI Logo" 
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                onError={(e) => {
+                    e.target.onerror = null; 
+                    e.target.src = 'https://sis.fgei.gov.pk/assets/images/logo.png'
+                }}
+            />
         </Box>
     );
 

@@ -183,16 +183,28 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
                         // Bulk challan generation — build detailed message
                         let msg = data.message;
                         if (data.skip_reasons) {
+                            const reasonLabels = {
+                                no_profile: 'No active profile',
+                                no_categories: 'No categories assigned',
+                                no_institution: 'No institution linked',
+                                no_year_session: 'No active year session',
+                                no_fee_structure: 'No matching fee structure',
+                            };
+
                             const reasons = [];
-                            if (data.skip_reasons.no_profile > 0) reasons.push(`${data.skip_reasons.no_profile} no profile`);
-                            if (data.skip_reasons.no_categories > 0) reasons.push(`${data.skip_reasons.no_categories} no categories`);
-                            if (data.skip_reasons.no_institution > 0) reasons.push(`${data.skip_reasons.no_institution} no institution`);
-                            if (data.skip_reasons.no_fee_structure > 0) reasons.push(`${data.skip_reasons.no_fee_structure} no fee structure`);
+                            Object.entries(data.skip_reasons).forEach(([key, count]) => {
+                                if (count > 0 && reasonLabels[key]) {
+                                    reasons.push(`${count} ${reasonLabels[key]}`);
+                                }
+                            });
+
                             if (reasons.length > 0) {
-                                msg += '\n\nSkip breakdown: ' + reasons.join(', ');
+                                msg += '\n\nSkip breakdown:\n• ' + reasons.join('\n• ');
                             }
                         }
                         setResultMessage(msg);
+                    } else if (data.moved_count !== undefined) {
+                        setResultMessage(data.message);
                     } else if (data.stats) {
                         setSyncStats(data.stats);
                     } else if (data.data && Array.isArray(data.data)) {
@@ -438,31 +450,44 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
                     {renderErrorBox()}
 
                     {status === STATUS.COMPLETE && (
-                        resultMessage ? (
-                            <Text size="sm" c="dimmed" mt={4} style={{ whiteSpace: 'pre-line' }}>
-                                {resultMessage}
-                            </Text>
-                        ) : syncStats ? (
-                            <Box>
-                                <Text size="sm" c="dimmed" mt={4}>
-                                    {(syncStats.inserted === 0 && syncStats.updated === 0)
-                                        ? "All data already up to date."
-                                        : `Sync Complete: ${syncStats.inserted} New, ${syncStats.updated} Updated`
-                                    }
+                        <Box mt={4}>
+                            {resultMessage && (
+                                <Text
+                                    size="sm"
+                                    c="dimmed"
+                                    ta={resultMessage.includes('\n•') ? 'left' : 'center'}
+                                    style={{
+                                        whiteSpace: 'pre-line',
+                                        lineHeight: 1.5,
+                                        fontSize: resultMessage.includes('\n•') ? '13px' : '14px'
+                                    }}
+                                >
+                                    {resultMessage}
                                 </Text>
-                                {syncStats.unchanged > 0 && (
-                                    <Text size="xs" c="dimmed">
-                                        ({syncStats.unchanged} records unchanged)
+                            )}
+
+                            {syncStats && (
+                                <Box>
+                                    <Text size="sm" c="dimmed">
+                                        {(syncStats.inserted === 0 && syncStats.updated === 0)
+                                            ? "All data already up to date."
+                                            : `Sync Complete: ${syncStats.inserted} New, ${syncStats.updated} Updated`
+                                        }
                                     </Text>
-                                )}
-                            </Box>
-                        ) : (
-                            recordCount !== null && (
-                                <Text size="xs" c="dimmed" mt={4}>
+                                    {syncStats.unchanged > 0 && (
+                                        <Text size="xs" c="dimmed">
+                                            ({syncStats.unchanged} records unchanged)
+                                        </Text>
+                                    )}
+                                </Box>
+                            )}
+
+                            {recordCount !== null && (
+                                <Text size="xs" c="dimmed">
                                     {recordCount.toLocaleString()} records fetched
                                 </Text>
-                            )
-                        )
+                            )}
+                        </Box>
                     )}
 
                     {status !== STATUS.COMPLETE && status !== STATUS.ERROR && (

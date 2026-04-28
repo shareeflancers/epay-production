@@ -60,6 +60,8 @@ class PublicChallanController extends Controller
             'data' => [
                 'challan_no' => $challan->challan_no,
                 'name' => $consumer->profileDetails->first()->name ?? 'N/A',
+                'class' => $challan->schoolClass->name ?? $consumer->profileDetails->first()->class ?? 'N/A',
+                'section' => $consumer->profileDetails->first()->section ?? '-',
                 'amount' => $challan->amount_within_dueDate,
                 'due_date' => $challan->due_date->format('Y-m-d'),
                 'status' => $challan->status,
@@ -82,7 +84,8 @@ class PublicChallanController extends Controller
                 'institution',
                 'region',
                 'schoolClass',
-                'level'
+                'level',
+                'yearSession'
             ])
             ->firstOrFail();
 

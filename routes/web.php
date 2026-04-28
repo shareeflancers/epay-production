@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\RegionController;
 use App\Http\Controllers\Admin\LevelController;
 use App\Http\Controllers\Admin\ClassController;
 use App\Http\Controllers\Admin\FeeFundHeadController;
+use App\Http\Controllers\Admin\YearSessionsController;
 use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -80,6 +81,13 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::delete('/classes/{class}', [ClassController::class, 'destroy'])->name('admin.classes.destroy');
     Route::put('/classes/{class}/status', [ClassController::class, 'updateStatus'])->name('admin.classes.update-status');
 
+    // Year Sessions CRUD
+    Route::get('/year-sessions', [YearSessionsController::class, 'index'])->name('admin.year-sessions.index');
+    Route::post('/year-sessions', [YearSessionsController::class, 'store'])->name('admin.year-sessions.store');
+    Route::put('/year-sessions/{yearSession}', [YearSessionsController::class, 'update'])->name('admin.year-sessions.update');
+    Route::delete('/year-sessions/{yearSession}', [YearSessionsController::class, 'destroy'])->name('admin.year-sessions.destroy');
+    Route::put('/year-sessions/{yearSession}/status', [YearSessionsController::class, 'updateStatus'])->name('admin.year-sessions.update-status');
+
     // Consumers CRUD
     Route::get('/consumers/{type}', [ConsumersController::class, 'index'])->name('admin.consumers.index');
     Route::put('/consumers/{consumer}', [ConsumersController::class, 'update'])->name('admin.consumers.update');
@@ -109,7 +117,11 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/utilities/challanUpdate', [SettingsController::class, 'challanIndex'])->name('admin.utilities.challanUpdate');
     Route::post('/settings/challan/search', [SettingsController::class, 'challanSearch'])->name('admin.settings.challan.search');
     Route::put('/settings/challan/{id}', [SettingsController::class, 'challanUpdateSingle'])->name('admin.settings.challan.update');
+    Route::get('/settings/year-sessions', [SettingsController::class, 'getYearSessions'])->name('admin.settings.year-sessions');
+    Route::get('/settings/challan-metadata', [SettingsController::class, 'getChallanMetadata'])->name('admin.settings.challan-metadata');
+    Route::get('/settings/challan-history', [SettingsController::class, 'challanHistoryIndex'])->name('admin.settings.challan-history');
     Route::post('/utilities/generateChallans', [SettingsController::class, 'generateBulkChallans'])->name('admin.utilities.generateChallans');
+    Route::post('/utilities/archiveChallans', [SettingsController::class, 'moveToHistory'])->name('admin.utilities.archiveChallans');
 
     // 1Link Testing
     Route::get('/one-link-testing', function () {

@@ -45,6 +45,11 @@ export const adminNavItems = [
         href: '/admin/classes'
     },
     {
+        label: 'Year Sessions',
+        icon: 'calendar',
+        href: '/admin/year-sessions'
+    },
+    {
         label: 'Institutions',
         icon: 'building',
         href: '/admin/institutions'
@@ -76,7 +81,9 @@ export const adminNavItems = [
         children: [
             { label: '→ Category Update', href: '/admin/utilities/categoryBind' },
             { label: '→ Challan Update', href: '/admin/utilities/challanUpdate' },
+            { label: '→ Challan History', href: '/admin/settings/challan-history' },
             { label: '→ Generate Challans', href: '/admin/utilities/generateChallans', action: 'generate' },
+            { label: '→ Archive Challans', href: '/admin/utilities/archiveChallans', action: 'archive' },
             { label: '→ 1Link API Test', href: '/admin/one-link-testing' },
         ]
     },

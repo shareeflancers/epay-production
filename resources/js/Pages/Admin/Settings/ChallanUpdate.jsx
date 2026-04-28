@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
 import {
     Title,
@@ -40,6 +40,18 @@ export default function ChallanUpdate() {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
+
+    // Metadata for dropdowns
+    const [metadata, setMetadata] = useState({
+        institutions: [],
+        regions: [],
+        categories: [],
+        heads: [],
+        classes: [],
+        levels: [],
+        sessions: [],
+    });
 
     // Edit Modal State
     const [opened, { open, close }] = useDisclosure(false);
@@ -55,11 +67,40 @@ export default function ChallanUpdate() {
         fee_type: '',
         status: '',
         reserved: '',
+        year_session_id: '',
+        institution_id: '',
+        region_id: '',
+        fee_fund_category_id: '',
+        fee_fund_head_id: '',
+        school_class_id: '',
+        level_id: '',
     });
 
+    useEffect(() => {
+        axios.get('/admin/settings/challan-metadata')
+            .then(res => {
+                const format = (arr) => arr.map(item => ({
+                    value: String(item.id),
+                    label: item.label || 'Unknown'
+                }));
+
+                setMetadata({
+                    institutions: format(res.data.institutions),
+                    regions: format(res.data.regions),
+                    categories: format(res.data.categories),
+                    heads: format(res.data.heads),
+                    classes: format(res.data.classes),
+                    levels: format(res.data.levels),
+                    sessions: format(res.data.sessions),
+                });
+            })
+            .catch(err => console.error("Failed to load metadata", err));
+    }, []);
+
     const handleSearch = (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         setLoading(true);
+        setHasSearched(true);
         axios.post('/admin/settings/challan/search', { query: searchQuery })
             .then(res => {
                 setSearchResults(res.data.data);
@@ -79,6 +120,13 @@ export default function ChallanUpdate() {
             fee_type: challan.fee_type || '',
             status: challan.status || '',
             reserved: challan.reserved || '',
+            year_session_id: challan.year_session_id ? String(challan.year_session_id) : '',
+            institution_id: challan.institution_id ? String(challan.institution_id) : '',
+            region_id: challan.region_id ? String(challan.region_id) : '',
+            fee_fund_category_id: challan.fee_fund_category_id ? String(challan.fee_fund_category_id) : '',
+            fee_fund_head_id: challan.fee_fund_head_id ? String(challan.fee_fund_head_id) : '',
+            school_class_id: challan.school_class_id ? String(challan.school_class_id) : '',
+            level_id: challan.level_id ? String(challan.level_id) : '',
         });
         open();
     };
@@ -88,7 +136,7 @@ export default function ChallanUpdate() {
         put(`/admin/settings/challan/${editingChallan.id}`, {
             onSuccess: () => {
                 close();
-                handleSearch({ preventDefault: () => {} });
+                handleSearch();
             },
         });
     };
@@ -171,9 +219,16 @@ export default function ChallanUpdate() {
                                     <Text size="xs" c="dimmed">Consumer: {getConsumerNumber(challan)}</Text>
                                 </Box>
 
-                                <Text size="xs" c="dimmed" ff="monospace" mb="sm" truncate>
-                                    {challan.challan_no}
-                                </Text>
+                                <Group justify="space-between" align="center" mb="sm">
+                                    <Text size="xs" c="dimmed" ff="monospace" truncate>
+                                        {challan.challan_no}
+                                    </Text>
+                                    {challan.year_session && (
+                                        <Badge variant="dot" size="xs" color="indigo">
+                                            {challan.year_session.name}
+                                        </Badge>
+                                    )}
+                                </Group>
 
                                 <Divider mb="sm" />
 
@@ -187,8 +242,8 @@ export default function ChallanUpdate() {
                                         <Text size="sm">Rs. {formatAmount(challan.amount_arrears)}</Text>
                                     </Group>
                                     <Group justify="space-between">
-                                        <Text size="xs" c="dimmed">Within Due Date</Text>
-                                        <Text size="sm">Rs. {formatAmount(challan.amount_within_dueDate)}</Text>
+                                        <Text size="xs" c="dimmed">Total (Within Due)</Text>
+                                        <Text size="sm" fw={600} color="blue">Rs. {formatAmount(challan.amount_within_dueDate)}</Text>
                                     </Group>
                                     <Group justify="space-between">
                                         <Text size="xs" c="dimmed">After Due Date</Text>
@@ -219,7 +274,7 @@ export default function ChallanUpdate() {
                     })}
                 </SimpleGrid>
 
-                {searchResults.length === 0 && searchQuery && !loading && (
+                {searchResults.length === 0 && hasSearched && !loading && (
                     <Text c="dimmed" ta="center" mt="lg">
                         No challans found. Try a different search term.
                     </Text>
@@ -231,7 +286,7 @@ export default function ChallanUpdate() {
                     onClose={() => { close(); reset(); }}
                     title="Edit Challan Details"
                     centered
-                    size="lg"
+                    size="xl"
                 >
                     <form onSubmit={handleUpdate}>
                         <Stack>
@@ -289,7 +344,7 @@ export default function ChallanUpdate() {
                                 />
                             </SimpleGrid>
 
-                            <SimpleGrid cols={2}>
+                            <SimpleGrid cols={3}>
                                 <ThemedInput
                                     label="Due Date"
                                     type="date"
@@ -308,18 +363,98 @@ export default function ChallanUpdate() {
                                     onChange={(value) => setData('status', value)}
                                     error={errors.status}
                                 />
+                                <ThemedSelect
+                                    label="Fee Type"
+                                    data={[
+                                        { value: 'fee', label: 'Fee' },
+                                        { value: 'voucher', label: 'Voucher' },
+                                    ]}
+                                    value={data.fee_type}
+                                    onChange={(value) => setData('fee_type', value)}
+                                    error={errors.fee_type}
+                                />
                             </SimpleGrid>
 
-                            <ThemedSelect
-                                label="Fee Type"
-                                data={[
-                                    { value: 'fee', label: 'Fee' },
-                                    { value: 'voucher', label: 'Voucher' },
-                                ]}
-                                value={data.fee_type}
-                                onChange={(value) => setData('fee_type', value)}
-                                error={errors.fee_type}
-                            />
+                            <Divider label="Linking & Structure" labelPosition="center" />
+
+                            <SimpleGrid cols={2}>
+                                <ThemedSelect
+                                    label="Institution"
+                                    placeholder="Search institution"
+                                    data={metadata.institutions}
+                                    value={data.institution_id}
+                                    onChange={(value) => setData('institution_id', value)}
+                                    error={errors.institution_id}
+                                    searchable
+                                    clearable
+                                />
+                                <ThemedSelect
+                                    label="Year Session"
+                                    placeholder="Select session"
+                                    data={metadata.sessions}
+                                    value={data.year_session_id}
+                                    onChange={(value) => setData('year_session_id', value)}
+                                    error={errors.year_session_id}
+                                    searchable
+                                    clearable
+                                />
+                            </SimpleGrid>
+
+                            <SimpleGrid cols={2}>
+                                <ThemedSelect
+                                    label="Region"
+                                    placeholder="Select region"
+                                    data={metadata.regions}
+                                    value={data.region_id}
+                                    onChange={(value) => setData('region_id', value)}
+                                    error={errors.region_id}
+                                    searchable
+                                    clearable
+                                />
+                                <ThemedSelect
+                                    label="Level"
+                                    placeholder="Select level"
+                                    data={metadata.levels}
+                                    value={data.level_id}
+                                    onChange={(value) => setData('level_id', value)}
+                                    error={errors.level_id}
+                                    searchable
+                                    clearable
+                                />
+                            </SimpleGrid>
+
+                            <SimpleGrid cols={3}>
+                                <ThemedSelect
+                                    label="Class / Section"
+                                    placeholder="Select class"
+                                    data={metadata.classes}
+                                    value={data.school_class_id}
+                                    onChange={(value) => setData('school_class_id', value)}
+                                    error={errors.school_class_id}
+                                    searchable
+                                    clearable
+                                />
+                                <ThemedSelect
+                                    label="Fee Category"
+                                    placeholder="Select category"
+                                    data={metadata.categories}
+                                    value={data.fee_fund_category_id}
+                                    onChange={(value) => setData('fee_fund_category_id', value)}
+                                    error={errors.fee_fund_category_id}
+                                    searchable
+                                    clearable
+                                />
+                                <ThemedSelect
+                                    label="Fee Head"
+                                    placeholder="Select head"
+                                    data={metadata.heads}
+                                    value={data.fee_fund_head_id}
+                                    onChange={(value) => setData('fee_fund_head_id', value)}
+                                    error={errors.fee_fund_head_id}
+                                    searchable
+                                    clearable
+                                />
+                            </SimpleGrid>
 
                             <ThemedInput
                                 label="Remarks"

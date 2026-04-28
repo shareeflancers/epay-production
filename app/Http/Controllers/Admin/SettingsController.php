@@ -28,7 +28,7 @@ class SettingsController extends Controller
     }
 
     /**
-     * Search for a consumer by identification number, consumer number, or name.
+     * Search for a consumer by identification number, or name.
      */
     public function search(Request $request)
     {
@@ -42,7 +42,8 @@ class SettingsController extends Controller
             ->where('identification_number', 'LIKE', "%{$query}%")
             ->orWhere('consumer_number', 'LIKE', "%{$query}%")
             ->orWhereHas('profileDetails', function ($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%");
+                $q->where('name', 'LIKE', "%{$query}%")
+                    ->orWhere('institution_name', 'LIKE', "%{$query}%");
             })
             ->limit(10) // Limit results for performance
             ->get();
@@ -170,37 +171,84 @@ class SettingsController extends Controller
      * Generate bulk challans for the current running month.
      * Creates one challan per active consumer based on their fee category & fee structure.
      */
+    /**
+     * Move all active challans to the history table.
+     */
+    public function moveToHistory()
+    {
+        DB::beginTransaction();
+        try {
+            $activeChallans = ActiveChallan::all();
+            $count = $activeChallans->count();
+
+            if ($count === 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No active challans to move.',
+                    'moved_count' => 0
+                ]);
+            }
+
+            foreach ($activeChallans as $challan) {
+                // Replicate attributes to history model (excluding ID)
+                $history = new \App\Models\ChallanHistory();
+                $history->fill($challan->getAttributes());
+                unset($history->id);
+                $history->save();
+
+                // Delete the active record
+                $challan->delete();
+            }
+
+            DB::commit();
+            Log::info("Archived {$count} challans to history.");
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully archived {$count} challans to history.",
+                'moved_count' => $count
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Move to history failed: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to move challans to history: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function generateBulkChallans()
     {
         $now = Carbon::now();
         $dueDate = $now->copy()->day(20)->format('Y-m-d');
-        $billingMonth = $now->format('F Y'); // e.g. "February 2026"
-
-        // region_id is now directly on consumer; school_class_id comes via student profile
+        $billingMonth = $now->format('F Y'); // e.g. "April 2026"
 
         $generated = 0;
-        $updated = 0;
-        $skipped = 0;
+        $updated   = 0;
+        $skipped   = 0;
         $skipReasons = [
-            'no_profile' => 0,
-            'no_categories' => 0,
-            'no_institution' => 0,
+            'no_profile'       => 0,
+            'no_categories'    => 0,
+            'no_institution'   => 0,
+            'no_year_session'  => 0,
             'no_fee_structure' => 0,
         ];
         $skippedDetails = [];
 
         DB::beginTransaction();
         try {
-            // Process consumers in chunks for memory efficiency
             Consumer::where('is_active', true)
-                ->with(['profileDetails' => function ($q) {
-                    $q->where('is_active', true);
-                }, 'institution'])
+                ->with([
+                    'profileDetails' => fn ($q) => $q->where('is_active', true),
+                    'institution',
+                    'region',
+                ])
                 ->chunk(100, function ($consumers) use (
-                    $dueDate, $billingMonth,
+                    $dueDate, $billingMonth, $now,
                     &$generated, &$updated, &$skipped, &$skipReasons, &$skippedDetails
                 ) {
-                    // Fetch existing challans for this batch to prevent duplicates
                     $existingChallans = ActiveChallan::whereIn('consumer_id', $consumers->pluck('id'))
                         ->get()
                         ->keyBy('consumer_id');
@@ -208,15 +256,15 @@ class SettingsController extends Controller
                     foreach ($consumers as $consumer) {
                         $profile = $consumer->profileDetails->first();
 
-                        // Skip if no active profile
+                        // ── Guard: active profile ─────────────────────────────
                         if (!$profile) {
                             $skipped++;
                             $skipReasons['no_profile']++;
-                            $skippedDetails[] = "Consumer #{$consumer->id} ({$consumer->consumer_number}): No active profile found";
+                            $skippedDetails[] = "Consumer #{$consumer->id} ({$consumer->consumer_number}): No active profile";
                             continue;
                         }
 
-                        // Skip if no fee categories assigned
+                        // ── Guard: fee categories ─────────────────────────────
                         if (empty($profile->fee_fund_category_ids)) {
                             $skipped++;
                             $skipReasons['no_categories']++;
@@ -224,12 +272,7 @@ class SettingsController extends Controller
                             continue;
                         }
 
-                        $categoryIds = $profile->fee_fund_category_ids;
-
-                        // region_id directly from consumer, school_class_id from student profile
-                        $regionId = $consumer->region_id ?? null;
-                        $schoolClassId  = $profile->school_class_id ?? null;
-
+                        // ── Guard: institution ────────────────────────────────
                         if (!$consumer->institution) {
                             $skipped++;
                             $skipReasons['no_institution']++;
@@ -237,88 +280,184 @@ class SettingsController extends Controller
                             continue;
                         }
 
+                        $categoryIds   = $profile->fee_fund_category_ids;
+                        $regionId      = $consumer->region_id ?? null;
+                        $schoolClassId = $profile->school_class_id ?? null;
+                        $institutionId = $consumer->institution_id;
+
+                        // ── Resolve active YearSession (institution + class) ──
+                        $yearSession = \App\Models\YearSession::where('institution_id', $institutionId)
+                            ->where('school_class_id', $schoolClassId)
+                            ->where('is_active', true)
+                            ->first();
+
+                        if (!$yearSession) {
+                            $skipped++;
+                            $skipReasons['no_year_session']++;
+                            $skippedDetails[] = "Consumer #{$consumer->id} ({$consumer->consumer_number}): No active year session for institution #{$institutionId}, class #{$schoolClassId}";
+                            continue;
+                        }
+
+                        // ── Fee structures ────────────────────────────────────
                         $query = FeeFundStructure::where('is_active', true)
                             ->whereIn('fee_fund_category_id', $categoryIds);
 
-                        if ($regionId) {
-                            $query->where('region_id', $regionId);
-                        }
-                        if ($schoolClassId) {
-                            $query->where('school_class_id', $schoolClassId);
-                        }
+                        if ($regionId)      { $query->where('region_id',       $regionId);      }
+                        if ($schoolClassId) { $query->where('school_class_id', $schoolClassId); }
 
-                        $feeStructures = $query->get();
+                        $feeStructures = $query->with(['feeFundCategory', 'feeFundHead'])->get();
 
                         if ($feeStructures->isEmpty()) {
                             $skipped++;
                             $skipReasons['no_fee_structure']++;
-                            $skippedDetails[] = "Consumer #{$consumer->id} ({$consumer->consumer_number}): No fee structure found (region_id: {$regionId}, school_class_id: {$schoolClassId}, categories: " . implode(',', $categoryIds) . ")";
+                            $skippedDetails[] = "Consumer #{$consumer->id} ({$consumer->consumer_number}): No fee structure (region: {$regionId}, class: {$schoolClassId}, cats: " . implode(',', $categoryIds) . ")";
                             continue;
                         }
 
-                        // Calculate amount_base = sum of all matching fee structure totals
+                        // ── Arrears Calculation ──────────────────────────────
+                        // Only look for the ABSOLUTE LATEST challan in History
+                        // If the most recent challan was paid, arrears are zero.
+                        // If the most recent challan was unpaid, its total becomes the new arrears.
+                        $absoluteLatestHistory = \App\Models\ChallanHistory::where('consumer_id', $consumer->id)
+                            ->orderBy('due_date', 'desc')
+                            ->first();
+
+                        $amountArrears = 0;
+                        $latestUnpaidHistory = null;
+
+                        if ($absoluteLatestHistory && $absoluteLatestHistory->status === 'U') {
+                            $latestUnpaidHistory = $absoluteLatestHistory;
+                            $amountArrears = $latestUnpaidHistory->amount_within_dueDate;
+                        }
+
+                        // Capture breakdown of arrears for the snapshot
+                        $arrearsDetails = [];
+                        if ($latestUnpaidHistory) {
+                            $snap = json_decode($latestUnpaidHistory->challan_snapshot, true);
+                            $arrearsDetails[] = [
+                                'challan_no' => $latestUnpaidHistory->challan_no,
+                                'amount'     => $latestUnpaidHistory->amount_within_dueDate,
+                                'breakdown'  => $snap['fee_structures'] ?? [],
+                                'source'     => 'history'
+                            ];
+                        }
+
+                        // ── Amounts ───────────────────────────────────────────
                         $amountBase = $feeStructures->sum('total');
+                        $totalAmount = $amountBase + $amountArrears;
+                        $feeType    = in_array($consumer->consumer_type, ['student', 'inductee']) ? 'fee' : 'voucher';
 
-                        // Determine fee_type based on consumer_type
-                        $feeType = in_array($consumer->consumer_type, ['student', 'inductee']) ? 'fee' : 'voucher';
-
-                        // Get category titles for the remarks
+                        // ── Category titles for remarks ───────────────────────
                         $categoryTitles = FeeFundCategory::whereIn('id', $categoryIds)
                             ->pluck('category_title')
                             ->implode(', ');
 
-                        // Build descriptive remarks
+                        // ── Descriptive reserved string ───────────────────────
                         $reserved = "Bulk Challan | {$billingMonth} | "
                             . "Consumer: {$consumer->consumer_number} | "
                             . "Type: {$consumer->consumer_type} | "
                             . "Name: {$profile->name} | "
-                            . "Region: {$profile->region_name} | "
                             . "Class: {$profile->class} | "
+                            . "Session: {$yearSession->name} | "
                             . "Categories: {$categoryTitles} | "
                             . "Fee Type: {$feeType} | "
                             . "Base Amount: {$amountBase} | "
+                            . "Arrears: {$amountArrears} | "
                             . "Due Date: {$dueDate}";
 
                         $firstStructure = $feeStructures->first();
 
-                        // Prepare challan data
+                        // ── Comprehensive snapshot (point-in-time record) ─────
+                        $snapshot = [
+                            'generated_at'  => $now->toIso8601String(),
+                            'billing_month' => $billingMonth,
+                            'arrears_calculation' => [
+                                'amount_arrears' => $amountArrears,
+                                'details'        => $arrearsDetails,
+                            ],
+                            'consumer' => [
+                                'id'              => $consumer->id,
+                                'consumer_number' => $consumer->consumer_number,
+                                'consumer_type'   => $consumer->consumer_type,
+                                'identification_number' => $consumer->identification_number,
+                                'region_id'       => $consumer->region_id,
+                                'institution_id'  => $consumer->institution_id,
+                            ],
+                            'profile' => [
+                                'id'                      => $profile->id,
+                                'name'                    => $profile->name,
+                                'father_or_guardian_name' => $profile->father_or_guardian_name,
+                                'class'                   => $profile->class,
+                                'school_class_id'         => $profile->school_class_id,
+                                'level_id'                => $profile->level_id,
+                                'region_name'             => $profile->region_name ?? null,
+                                'fee_fund_category_ids'   => $profile->fee_fund_category_ids,
+                            ],
+                            'institution' => $consumer->institution ? [
+                                'id'     => $consumer->institution->id,
+                                'name'   => $consumer->institution->name,
+                                'region_id' => $consumer->institution->region_id,
+                                'level_id'  => $consumer->institution->level_id,
+                            ] : null,
+                            'region' => $consumer->region ? [
+                                'id'   => $consumer->region->id,
+                                'name' => $consumer->region->name ?? $consumer->region->region ?? null,
+                            ] : null,
+                            'year_session' => [
+                                'id'         => $yearSession->id,
+                                'name'       => $yearSession->name,
+                                'start_date' => $yearSession->start_date?->toDateString(),
+                                'end_date'   => $yearSession->end_date?->toDateString(),
+                            ],
+                            'fee_structures' => $feeStructures->map(fn ($s) => [
+                                'id'                  => $s->id,
+                                'fee_fund_category_id'=> $s->fee_fund_category_id,
+                                'fee_fund_category'   => $s->feeFundCategory?->category_title,
+                                'fee_fund_head_id'    => $s->fee_fund_head_id,
+                                'fee_fund_head'       => $s->feeFundHead?->head_identifier ?? null,
+                                'fee_head_amounts'    => $s->fee_head_amounts ?? [],
+                                'total'               => $s->total,
+                                'region_id'           => $s->region_id,
+                                'school_class_id'     => $s->school_class_id,
+                            ])->values()->toArray(),
+                            'fee_categories' => FeeFundCategory::whereIn('id', $categoryIds)
+                                ->get(['id', 'category_title'])
+                                ->toArray(),
+                        ];
+
+                        // ── Challan payload ───────────────────────────────────
                         $challanData = [
-                            'due_date'             => $dueDate,
-                            'amount_base'          => $amountBase,
-                            'amount_arrears'       => 0.00,
-                            'amount_within_dueDate' => $amountBase,
-                            'amount_after_dueDate'  => $amountBase,
-                            'fee_type'             => $feeType,
-                            'reserved'             => $reserved,
-                            'institution_id'       => $consumer->institution_id,
-                            'region_id'            => $consumer->region_id,
-                            'fee_fund_category_id' => $firstStructure->fee_fund_category_id ?? null,
-                            'fee_fund_head_id'     => $firstStructure->fee_fund_head_id ?? null,
+                            'due_date'              => $dueDate,
+                            'amount_base'           => $amountBase,
+                            'amount_arrears'        => $amountArrears,
+                            'amount_within_dueDate' => $totalAmount,
+                            'amount_after_dueDate'  => $totalAmount,
+                            'fee_type'              => $feeType,
+                            'reserved'              => $reserved,
+                            'institution_id'        => $institutionId,
+                            'region_id'             => $regionId,
+                            'fee_fund_category_id'  => $firstStructure->fee_fund_category_id ?? null,
+                            'fee_fund_head_id'      => $firstStructure->fee_fund_head_id ?? null,
                             'fee_fund_structure_id' => $firstStructure->id ?? null,
-                            'school_class_id'      => $profile->school_class_id,
-                            'level_id'             => $profile->level_id,
-                            'challan_snapshot'     => json_encode([
-                                'profile' => $profile->toArray(),
-                                'fee_structures' => $feeStructures->toArray(),
-                                'institution' => $consumer->institution ? $consumer->institution->toArray() : null,
-                            ]),
-                            'is_active'            => true,
+                            'school_class_id'       => $schoolClassId,
+                            'level_id'              => $profile->level_id,
+                            'year_session_id'       => $yearSession->id,
+                            'challan_snapshot'      => json_encode($snapshot),
+                            'is_active'             => true,
                         ];
 
                         $activeChallan = $existingChallans->get($consumer->id);
 
                         if ($activeChallan) {
-                            // Update existing record to prevent duplicates
                             $activeChallan->update($challanData);
                             $updated++;
                         } else {
-                            // Generate unique challan number and create new record
                             $challanNo = $this->generateUniqueChallanNo();
                             ActiveChallan::create(array_merge($challanData, [
-                                'consumer_id'          => $consumer->id,
-                                'challan_no'           => $challanNo,
-                                'status'               => 'U',
-                                'tran_auth_id'         => 'J8NTDA',
+                                'consumer_id'  => $consumer->id,
+                                'challan_no'   => $challanNo,
+                                'status'       => 'U',
+                                'tran_auth_id' => 'J8NTDA',
                             ]));
                             $generated++;
                         }
@@ -327,26 +466,27 @@ class SettingsController extends Controller
 
             DB::commit();
 
-            Log::info("Bulk Challan Generation completed: {$generated} generated, {$updated} updated, {$skipped} skipped for {$billingMonth}.");
+            Log::info("Bulk Challan Generation: {$generated} generated, {$updated} updated, {$skipped} skipped for {$billingMonth}.");
 
-            // Build contextual message
+            // ── Response message ──────────────────────────────────────────────
             if ($generated === 0 && $updated === 0 && $skipped === 0) {
                 $message = "No active consumers found for {$billingMonth}.";
             } elseif ($generated === 0 && $updated === 0) {
-                $message = "No challans generated or updated — {$skipped} consumers skipped (missing fee structure or profile) for {$billingMonth}.";
+                $message = "No challans generated — {$skipped} consumers skipped for {$billingMonth}.";
             } else {
                 $message = "{$generated} challans generated, {$updated} updated, {$skipped} skipped for {$billingMonth}.";
             }
 
             return response()->json([
-                'success' => true,
-                'message' => $message,
-                'generated' => $generated,
-                'updated'   => $updated,
-                'skipped'   => $skipped,
-                'skip_reasons' => $skipReasons,
-                'skipped_details' => array_slice($skippedDetails, 0, 50), // limit to first 50
+                'success'         => true,
+                'message'         => $message,
+                'generated'       => $generated,
+                'updated'         => $updated,
+                'skipped'         => $skipped,
+                'skip_reasons'    => $skipReasons,
+                'skipped_details' => array_slice($skippedDetails, 0, 50),
             ]);
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Bulk Challan Generation failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
@@ -383,7 +523,7 @@ class SettingsController extends Controller
             return response()->json(['data' => []]);
         }
 
-        $challans = ActiveChallan::with(['consumer.profileDetails'])
+        $challans = ActiveChallan::with(['consumer.profileDetails', 'yearSession'])
             ->where('challan_no', 'LIKE', "%{$query}%")
             ->orWhereHas('consumer', function ($q) use ($query) {
                 $q->where('consumer_number', 'LIKE', "%{$query}%");
@@ -396,8 +536,66 @@ class SettingsController extends Controller
     }
 
     /**
+     * Get active year sessions for the update dropdown.
+     */
+    public function getYearSessions()
+    {
+        $sessions = \App\Models\YearSession::where('is_active', true)
+            ->with(['schoolClass', 'institution'])
+            ->get()
+            ->map(fn($s) => [
+                'id' => $s->id,
+                'name' => "{$s->name} - {$s->schoolClass?->name} ({$s->institution?->name})",
+            ]);
+
+        return response()->json(['data' => $sessions]);
+    }
+
+    /**
      * Update a single challan's editable fields.
      */
+    /**
+     * Get all metadata needed for challan updates (dropdowns).
+     */
+    public function getChallanMetadata()
+    {
+        return response()->json([
+            'institutions' => \App\Models\Institution::select('id', 'name as label')->get(),
+            'regions'      => \App\Models\Region::select('id', 'name as label')->get(),
+            'categories'   => FeeFundCategory::select('id', 'category_title as label')->get(),
+            'heads'        => \App\Models\FeeFundHead::select('id', 'head_identifier as label')->get(),
+            'classes'      => \App\Models\SchoolClass::select('id', 'name as label')->get(),
+            'levels'       => \App\Models\Level::select('id', 'level as label')->get(),
+            'sessions'     => \App\Models\YearSession::where('is_active', true)->select('id', 'name as label')->get(),
+        ]);
+    }
+
+    public function challanHistoryIndex(Request $request)
+    {
+        $search = $request->input('search');
+
+        $activeQuery = ActiveChallan::with(['consumer.profileDetails', 'yearSession', 'institution', 'region']);
+        $archivedQuery = \App\Models\ChallanHistory::with(['yearSession', 'institution', 'region']);
+
+        if ($search) {
+            $activeQuery->where(function($q) use ($search) {
+                $q->where('challan_no', 'LIKE', "%{$search}%")
+                  ->orWhereHas('consumer', function($cq) use ($search) {
+                      $cq->where('consumer_number', 'LIKE', "%{$search}%");
+                  });
+            });
+            $archivedQuery->where('challan_no', 'LIKE', "%{$search}%");
+            // Note: Archived doesn't have a direct consumer relation in many cases if they were deleted/moved,
+            // but we can search by challan_no which is unique.
+        }
+
+        return Inertia::render('Admin/Settings/ChallanHistory', [
+            'activeChallans'   => $activeQuery->latest()->paginate(10, ['*'], 'active_page')->withQueryString(),
+            'archivedChallans' => $archivedQuery->latest()->paginate(10, ['*'], 'archived_page')->withQueryString(),
+            'filters'          => $request->all(['search']),
+        ]);
+    }
+
     public function challanUpdateSingle(Request $request, $id)
     {
         $request->validate([
@@ -409,6 +607,13 @@ class SettingsController extends Controller
             'fee_type'              => 'nullable|in:fee,voucher',
             'status'                => 'nullable|in:U,P,B',
             'reserved'              => 'nullable|string|max:400',
+            'year_session_id'       => 'nullable|exists:year_sessions,id',
+            'institution_id'        => 'nullable|exists:institutions,id',
+            'region_id'             => 'nullable|exists:regions,id',
+            'fee_fund_category_id'  => 'nullable|exists:fee_fund_category,id',
+            'fee_fund_head_id'      => 'nullable|exists:fee_fund_heads,id',
+            'school_class_id'       => 'nullable|exists:school_classes,id',
+            'level_id'              => 'nullable|exists:levels,id',
         ]);
 
         DB::beginTransaction();
@@ -423,6 +628,13 @@ class SettingsController extends Controller
                 'fee_type',
                 'status',
                 'reserved',
+                'year_session_id',
+                'institution_id',
+                'region_id',
+                'fee_fund_category_id',
+                'fee_fund_head_id',
+                'school_class_id',
+                'level_id',
             ]));
 
             DB::commit();

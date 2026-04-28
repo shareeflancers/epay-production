@@ -26,4 +26,12 @@ class SchoolClass extends Model
             'is_deleted' => 'boolean',
         ];
     }
+
+    /**
+     * Get the year sessions for this class.
+     */
+    public function yearSessions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(YearSession::class, 'school_class_id');
+    }
 }

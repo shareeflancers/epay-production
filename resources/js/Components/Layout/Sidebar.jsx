@@ -11,7 +11,8 @@ import {
     IconChartBar,
     IconSettings,
     IconDatabase,
-    IconList
+    IconList,
+    IconCalendar
 } from '@tabler/icons-react';
 import { Link, usePage } from '@inertiajs/react';
 import { useLayout } from './AdminLayout';
@@ -52,6 +53,7 @@ const icons = {
     stairs: () => <IconStairs size={20} stroke={1.5} />,
     building: () => <IconBuilding size={20} stroke={1.5} />,
     list: () => <IconList size={20} stroke={1.5} />,
+    calendar: () => <IconCalendar size={20} stroke={1.5} />,
 };
 
 const getIcon = (iconName, isActive, themeColor) => {
@@ -106,7 +108,7 @@ export default function Sidebar() {
 
                         // Recursive function to render children could be here, but for 1 level deep:
                         const childrenItems = hasChildren ? item.children.map(child => {
-                            const isActionItem = child.action === 'fetch' || child.action === 'generate';
+                            const isActionItem = child.action === 'fetch' || child.action === 'generate' || child.action === 'archive';
                             return (
                                 <NavLink
                                     key={child.href}
@@ -117,7 +119,7 @@ export default function Sidebar() {
                                     onClick={() => {
                                         closeMobile();
                                         if (isActionItem) {
-                                            const method = child.action === 'generate' ? 'POST' : 'GET';
+                                            const method = (child.action === 'generate' || child.action === 'archive') ? 'POST' : 'GET';
                                             openFetchModal(child.href, child.label, method);
                                         }
                                     }}

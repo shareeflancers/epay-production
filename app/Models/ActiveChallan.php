@@ -43,6 +43,7 @@ class ActiveChallan extends Model
         'fee_fund_structure_id',
         'school_class_id',
         'level_id',
+        'year_session_id',
         'challan_snapshot',
         'is_active',
     ];
@@ -127,6 +128,14 @@ class ActiveChallan extends Model
     public function level(): BelongsTo
     {
         return $this->belongsTo(Level::class, 'level_id');
+    }
+
+    /**
+     * Get the year session.
+     */
+    public function yearSession(): BelongsTo
+    {
+        return $this->belongsTo(YearSession::class, 'year_session_id');
     }
 
     /**

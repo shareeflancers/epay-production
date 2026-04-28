@@ -24,4 +24,12 @@ class Institution extends Model
     {
         return $this->belongsTo(Level::class);
     }
+
+    /**
+     * Get the year sessions for this institution.
+     */
+    public function yearSessions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(YearSession::class, 'institution_id');
+    }
 }

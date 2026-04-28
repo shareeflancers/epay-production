@@ -19,8 +19,8 @@ class ChallansController extends Controller
         $username = $request->header('username');
         $password = $request->header('password');
 
-        $validUsername = env('API_USERNAME');
-        $validPassword = env('API_PASSWORD');
+        $validUsername = config('services.onelink.username');
+        $validPassword = config('services.onelink.password');
 
         if (empty($username) || empty($password) ||
             $username !== $validUsername || $password !== $validPassword) {
@@ -197,6 +197,20 @@ class ChallansController extends Controller
                     'message' => 'Transaction Amount Mismatch!'
                 ], 200);
             }
+
+            // Case 7: Check the time and Due Date
+            // if($challan->tran_date <= Carbon::Now()){
+            //     return response()->json([
+            //         'response_Code' => '10',
+            //         'message' => 'Challan Expired!'
+            //     ], 200);
+            // }
+
+            /* add a code here to look for history of challan to ideally look for the paid challan of current month
+            when we move pass the payment dates.
+
+            1. Make sure to add cases where if 25th date is passed then return user the message the user has already paid this month fee.
+            2. also if in history and unpaid and date is passed send the message that payment date has passed and you can pay it next month as arrears for which no extra fee will be charged.*/
 
             // Case 7: Update challan details
             if($challan->tran_auth_id == $validated['tran_auth_id']){

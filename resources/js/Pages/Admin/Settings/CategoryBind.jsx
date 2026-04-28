@@ -120,7 +120,7 @@ export default function CategoryBind() {
                     <form onSubmit={handleSearch}>
                         <Group>
                             <ThemedInput
-                                placeholder="Search by ID, Name, or Consumer No."
+                                placeholder="Search by B-Form No. or Name."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 style={{ flex: 1 }}

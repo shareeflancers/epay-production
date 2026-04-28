@@ -387,14 +387,28 @@
                 </tr>
                 <tr>
                     <th>Class / Section</th>
-                    <td>{{ $challan->schoolClass->name ?? $profile->class }} - {{ $profile->section }}</td>
+                    <td>{{ $challan->schoolClass->name ?? $profile->class }} - {{ $profile->section ?? '-' }}</td>
+                </tr>
+                <tr>
+                    <th>Session</th>
+                    <td>{{ $challan->yearSession->name ?? ($snapshot['year_session']['name'] ?? 'N/A') }}</td>
                 </tr>
                 <tr>
                     <th>Challan Number</th>
                     <td>{{ $challan->challan_no }}</td>
                 </tr>
+                @if($challan->amount_arrears > 0)
                 <tr>
-                    <th>Amount Paid</th>
+                    <th>Current Fee</th>
+                    <td>Rs. {{ number_format($challan->amount_base, 0) }}/-</td>
+                </tr>
+                <tr>
+                    <th>Arrears Paid</th>
+                    <td>Rs. {{ number_format($challan->amount_arrears, 0) }}/-</td>
+                </tr>
+                @endif
+                <tr>
+                    <th>Total Amount Paid</th>
                     <td style="font-size: 18px; font-weight: 900; color: #27ae60;">Rs. {{ number_format($challan->amount_within_dueDate, 0) }}/-</td>
                 </tr>
                 <tr>
@@ -416,12 +430,65 @@
     @else
         {{-- UNPAID CHALLAN FORMAT (3 COPIES) --}}
         @php
-            $copies = ['Bank Copy', 'Student Copy', 'Institution Copy'];
+            $copies = ['Bank Copy', 'Student Copy', 'Institution Copy', 'Payment Instructions'];
             $billingMonth = $challan->reserved ? trim(explode('|', $challan->reserved)[1]) : 'Fee Challan';
         @endphp
 
         @foreach($copies as $copy)
         <div class="challan-copy">
+            @if($copy === 'Payment Instructions')
+                <div class="header">
+                    <div class="logo-section">
+                        <img src="{{ asset('assets/logo/logo.png') }}" alt="Logo" class="logo" onerror="this.src='https://sis.fgei.gov.pk/assets/images/logo.png'">
+                        <div>
+                            <h1 class="institution-name" style="font-size: 12px;">HOW TO PAY YOUR FEE</h1>
+                            <div class="billing-month">Step-by-Step Guide</div>
+                        </div>
+                    </div>
+                    <span class="copy-tag">{{ $copy }}</span>
+                </div>
+
+                <div style="font-size: 9px; margin-top: 10px;">
+                    <div style="background: #f8f9fa; padding: 8px; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 10px;">
+                        <strong style="color: #007bff; display: block; margin-bottom: 4px;">METHOD 1: BANK APPS (OTHER THAN ASKARI BANK) / EASYPAISA / JAZZCASH / UPAISA / SADAPAY etc....</strong>
+                        <ol style="margin: 0; padding-left: 15px;">
+                            <li>Open your Bank App, EasyPaisa, or JazzCash etc...</li>
+                            <li>Go to <strong>Bill Payment</strong> → <strong>1Bill</strong>.</li>
+                            <li>Select <strong>Invoice / Challan</strong>.</li>
+                            <li>Enter PSID: <strong style="font-size: 11px; letter-spacing: 0.5px;">{{ '111787474' . $challan->consumer->institution_id . $challan->consumer->consumer_number }}</strong></li>
+                        </ol>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 7px; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 8px;">
+                        <strong style="color: #007bff; display: block; margin-bottom: 3px; font-size: 8px;">METHOD 1: ALL BANK APPS / EASYPAISA / JAZZCASH / UPaisa / SADAPAY</strong>
+                        <ol style="margin: 0; padding-left: 12px; font-size: 8px;">
+                            <li>Open your Bank App or Mobile Wallet (EasyPaisa/JazzCash).</li>
+                            <li>Go to <strong>Bill Payment</strong> and select <strong>1Bill</strong>.</li>
+                            <li>Select <strong>Invoice / Challan</strong>.</li>
+                            <li>Enter PSID: <strong style="font-size: 10px; color: #d63384;">{{ '111787474' . $challan->consumer->institution_id . $challan->consumer->consumer_number }}</strong></li>
+                        </ol>
+                    </div>
+
+                    <div style="background: #f1fcf4; padding: 7px; border-radius: 8px; border: 1px solid #d1f2d9; margin-bottom: 8px;">
+                        <strong style="color: #198754; display: block; margin-bottom: 3px; font-size: 8px;">METHOD 2: ASKARI BANK MOBILE APP (FASTEST)</strong>
+                        <ol style="margin: 0; padding-left: 12px; font-size: 8px;">
+                            <li>Login to Askari Mobile App → <strong>Payments</strong> → <strong>School Fee</strong>.</li>
+                            <li>Select <strong>FGEI e-Portal</strong>.</li>
+                            <li>Enter ID: <strong style="font-size: 10px; color: #198754;">{{ '447' . $challan->consumer->institution_id . $challan->consumer->consumer_number }}</strong></li>
+                        </ol>
+                    </div>
+
+                    <div style="background: #fff8f0; padding: 7px; border-radius: 8px; border: 1px solid #ffe8cc; margin-bottom: 8px;">
+                        <strong style="color: #fd7e14; display: block; margin-bottom: 3px; font-size: 8px;">METHOD 3: OVER-THE-COUNTER (ASKARI BANK ONLY)</strong>
+                        <p style="margin: 0; padding-left: 5px; font-size: 8px;">Visit any <strong>Askari Bank</strong> branch and tell the teller you want to pay <strong>FGEI Fee</strong> using ID: <strong>{{ '447' . $challan->consumer->institution_id . $challan->consumer->consumer_number }}</strong></p>
+                    </div>
+
+                    <div style="background: #f0f7ff; padding: 7px; border-radius: 8px; border: 1px solid #cfe2ff;">
+                        <strong style="color: #052c65; display: block; margin-bottom: 3px; font-size: 8px;">METHOD 4: OVER-THE-COUNTER (ANY OTHER BANK)</strong>
+                        <p style="margin: 0; padding-left: 5px; font-size: 8px;">Visit any branch of <strong>other banks</strong> and tell the teller you want to pay <strong>1Bill Invoice</strong> using PSID: <strong style="color: #052c65;">{{ '111787474' . $challan->consumer->institution_id . $challan->consumer->consumer_number }}</strong></p>
+                    </div>
+                </div>
+            @else
             <div class="diagonal-watermark">
                 @for($i=0; $i<10; $i++)
                 <div class="watermark-row">
@@ -461,10 +528,21 @@
 
             <table class="details-table" style="font-size: 9px; margin: 5px 0;">
                 <tr><th>Student</th><td>{{ $profile->name }}</td></tr>
-                <tr><th>Class</th><td>{{ $challan->schoolClass->name ?? $profile->class }}</td></tr>
+                <tr><th>Class / Section</th><td>{{ ($challan->schoolClass->name ?? $profile->class) }} - {{ $profile->section ?? '-' }}</td></tr>
+                <tr><th>Session</th><td>{{ $challan->yearSession->name ?? ($snapshot['year_session']['name'] ?? 'N/A') }}</td></tr>
                 <tr><th>Due Date</th><td style="color: red;">{{ $challan->due_date->format('d-M-Y') }}</td></tr>
+
+                @if($challan->amount_arrears > 0)
+                    <tr><th>Current Fee</th><td>Rs. {{ number_format($challan->amount_base, 0) }}/-</td></tr>
+                    <tr><th>Arrears</th><td>Rs. {{ number_format($challan->amount_arrears, 0) }}/-</td></tr>
+                @endif
+
                 <tr><th>Payable</th><td style="font-weight: 900; font-size: 12px;">Rs. {{ number_format($challan->amount_within_dueDate, 0) }}/-</td></tr>
             </table>
+
+            <div style="font-size: 8px; margin: 5px 0; padding: 4px; border: 1px dashed #ccc; text-align: center; color: #444; border-radius: 4px;">
+                <strong>Note:</strong> Rs. 18/- Service Charges apply if paid via 1Bill / Bank Apps.
+            </div>
 
             <div style="font-size: 10px; font-style: italic; margin-top: 5px;">
                 <strong>In Words:</strong> {{ \App\Helpers\NumberHelper::amountInWords($challan->amount_within_dueDate) }}
@@ -481,6 +559,7 @@
                     <div class="signature-label">Depositor Signature</div>
                 </div>
             </div>
+            @endif
         </div>
         @endforeach
     @endif
