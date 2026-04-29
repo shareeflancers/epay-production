@@ -32,6 +32,7 @@ import { useTheme } from '@/theme';
 import { adminNavItems } from '@/config/navigation';
 import axios from 'axios';
 import { notifications } from '@mantine/notifications';
+import FetchProgressModal from '@/Components/UI/FetchProgressModal';
 
 export default function MonthlyProcedure() {
     const { primaryColor } = useTheme();
@@ -43,6 +44,12 @@ export default function MonthlyProcedure() {
         step3: null
     });
     const [snapshots, setSnapshots] = useState({});
+    const [progressModal, setProgressModal] = useState({
+        opened: false,
+        url: '',
+        label: '',
+        method: 'GET'
+    });
 
     useEffect(() => {
         fetchSnapshots();
@@ -81,70 +88,36 @@ export default function MonthlyProcedure() {
         }
     };
 
-    const runStep1 = async () => {
-        setLoading(true);
-        try {
-            const res = await axios.post('/admin/utilities/archiveChallans');
-            setResults(prev => ({ ...prev, step1: res.data }));
-            notifications.show({
-                title: 'Step 1 Complete',
-                message: res.data.message || 'All unpaid challans archived successfully.',
-                color: 'green'
-            });
-            fetchSnapshots();
-        } catch (err) {
-            notifications.show({
-                title: 'Step 1 Failed',
-                message: err.response?.data?.message || 'Failed to archive challans.',
-                color: 'red'
-            });
-        } finally {
-            setLoading(false);
-        }
+    const runStep1 = () => {
+        setProgressModal({
+            opened: true,
+            url: '/admin/utilities/archiveChallans',
+            label: 'Archive History',
+            method: 'POST'
+        });
     };
 
-    const runStep2 = async () => {
-        setLoading(true);
-        try {
-            const res = await axios.get('/admin/api/fetch/student');
-            setResults(prev => ({ ...prev, step2: res.data }));
-            notifications.show({
-                title: 'Step 2 Complete',
-                message: `Successfully processed students. Inserted: ${res.data.stats.inserted}, Updated: ${res.data.stats.updated}`,
-                color: 'green'
-            });
-            fetchSnapshots();
-        } catch (err) {
-            notifications.show({
-                title: 'Step 2 Failed',
-                message: err.response?.data?.message || 'Failed to fetch student data.',
-                color: 'red'
-            });
-        } finally {
-            setLoading(false);
-        }
+    const runStep2 = () => {
+        setProgressModal({
+            opened: true,
+            url: '/admin/api/fetch/student',
+            label: 'Student Sync',
+            method: 'GET'
+        });
     };
 
-    const runStep3 = async () => {
-        setLoading(true);
-        try {
-            const res = await axios.post('/admin/utilities/generateChallans');
-            setResults(prev => ({ ...prev, step3: res.data }));
-            notifications.show({
-                title: 'Step 3 Complete',
-                message: res.data.message || 'New month challans generated successfully.',
-                color: 'green'
-            });
-            fetchSnapshots();
-        } catch (err) {
-            notifications.show({
-                title: 'Step 3 Failed',
-                message: err.response?.data?.message || 'Failed to generate challans.',
-                color: 'red'
-            });
-        } finally {
-            setLoading(false);
-        }
+    const runStep3 = () => {
+        setProgressModal({
+            opened: true,
+            url: '/admin/utilities/generateChallans',
+            label: 'Bulk Generation',
+            method: 'POST'
+        });
+    };
+
+    const onModalClose = () => {
+        setProgressModal(prev => ({ ...prev, opened: false }));
+        fetchSnapshots();
     };
 
     return (
@@ -315,6 +288,14 @@ export default function MonthlyProcedure() {
                     </Paper>
                 </Stack>
             </Container>
+
+            <FetchProgressModal
+                opened={progressModal.opened}
+                onClose={onModalClose}
+                fetchUrl={progressModal.url}
+                fetchLabel={progressModal.label}
+                fetchMethod={progressModal.method}
+            />
         </AdminLayout>
     );
 }
