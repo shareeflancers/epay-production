@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Container,
     Paper,
@@ -24,7 +24,8 @@ import {
     IconCheck,
     IconAlertCircle,
     IconCalendarMonth,
-    IconArrowRight
+    IconArrowRight,
+    IconHistory
 } from '@tabler/icons-react';
 import { AdminLayout } from '@/Components/Layout';
 import { useTheme } from '@/theme';
@@ -41,6 +42,44 @@ export default function MonthlyProcedure() {
         step2: null,
         step3: null
     });
+    const [snapshots, setSnapshots] = useState({});
+
+    useEffect(() => {
+        fetchSnapshots();
+    }, []);
+
+    const fetchSnapshots = async () => {
+        try {
+            const res = await axios.get('/admin/security-audit/latest-snapshots');
+            setSnapshots(res.data);
+        } catch (err) {
+            console.error('Failed to fetch snapshots', err);
+        }
+    };
+
+    const runRollback = async (stepName) => {
+        const snapshot = snapshots[stepName];
+        if (!snapshot) return;
+
+        setLoading(true);
+        try {
+            const res = await axios.post(`/admin/procedure/rollback/${snapshot.id}`);
+            notifications.show({
+                title: 'Rollback Success',
+                message: res.data.message,
+                color: 'blue'
+            });
+            fetchSnapshots();
+        } catch (err) {
+            notifications.show({
+                title: 'Rollback Failed',
+                message: err.response?.data?.message || 'Failed to rollback.',
+                color: 'red'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const runStep1 = async () => {
         setLoading(true);
@@ -52,7 +91,7 @@ export default function MonthlyProcedure() {
                 message: res.data.message || 'All unpaid challans archived successfully.',
                 color: 'green'
             });
-            setActive(1);
+            fetchSnapshots();
         } catch (err) {
             notifications.show({
                 title: 'Step 1 Failed',
@@ -74,7 +113,7 @@ export default function MonthlyProcedure() {
                 message: `Successfully processed students. Inserted: ${res.data.stats.inserted}, Updated: ${res.data.stats.updated}`,
                 color: 'green'
             });
-            setActive(2);
+            fetchSnapshots();
         } catch (err) {
             notifications.show({
                 title: 'Step 2 Failed',
@@ -96,7 +135,7 @@ export default function MonthlyProcedure() {
                 message: res.data.message || 'New month challans generated successfully.',
                 color: 'green'
             });
-            setActive(3);
+            fetchSnapshots();
         } catch (err) {
             notifications.show({
                 title: 'Step 3 Failed',
@@ -142,15 +181,30 @@ export default function MonthlyProcedure() {
                                         Required before new arrears calculation.
                                     </Alert>
                                 </Box>
-                                <Button
-                                    fullWidth
-                                    leftSection={<IconArchive size={16} />}
-                                    onClick={runStep1}
-                                    loading={loading}
-                                    color="blue"
-                                >
-                                    Execute Archive
-                                </Button>
+                                <Stack gap="xs">
+                                    <Button
+                                        fullWidth
+                                        leftSection={<IconArchive size={16} />}
+                                        onClick={runStep1}
+                                        loading={loading}
+                                        color="blue"
+                                    >
+                                        Execute Archive
+                                    </Button>
+                                    {snapshots.archive && !snapshots.archive.is_rolled_back && (
+                                        <Button
+                                            fullWidth
+                                            variant="subtle"
+                                            color="red"
+                                            size="xs"
+                                            onClick={() => runRollback('archive')}
+                                            loading={loading}
+                                            leftSection={<IconHistory size={14} />}
+                                        >
+                                            Rollback Step 1
+                                        </Button>
+                                    )}
+                                </Stack>
                             </Stack>
                         </Paper>
 
@@ -178,15 +232,30 @@ export default function MonthlyProcedure() {
                                         </List>
                                     )}
                                 </Box>
-                                <Button
-                                    fullWidth
-                                    leftSection={<IconUsers size={16} />}
-                                    onClick={runStep2}
-                                    loading={loading}
-                                    color="cyan"
-                                >
-                                    Sync Data
-                                </Button>
+                                <Stack gap="xs">
+                                    <Button
+                                        fullWidth
+                                        leftSection={<IconUsers size={16} />}
+                                        onClick={runStep2}
+                                        loading={loading}
+                                        color="cyan"
+                                    >
+                                        Sync Data
+                                    </Button>
+                                    {snapshots.sync && !snapshots.sync.is_rolled_back && (
+                                        <Button
+                                            fullWidth
+                                            variant="subtle"
+                                            color="red"
+                                            size="xs"
+                                            onClick={() => runRollback('sync')}
+                                            loading={loading}
+                                            leftSection={<IconHistory size={14} />}
+                                        >
+                                            Rollback Step 2
+                                        </Button>
+                                    )}
+                                </Stack>
                             </Stack>
                         </Paper>
 
@@ -208,15 +277,30 @@ export default function MonthlyProcedure() {
                                         Calculates current fees + arrears.
                                     </Alert>
                                 </Box>
-                                <Button
-                                    fullWidth
-                                    leftSection={<IconFilePlus size={16} />}
-                                    onClick={runStep3}
-                                    loading={loading}
-                                    color="green"
-                                >
-                                    Generate Bulk
-                                </Button>
+                                <Stack gap="xs">
+                                    <Button
+                                        fullWidth
+                                        leftSection={<IconFilePlus size={16} />}
+                                        onClick={runStep3}
+                                        loading={loading}
+                                        color="green"
+                                    >
+                                        Generate Bulk
+                                    </Button>
+                                    {snapshots.generate && !snapshots.generate.is_rolled_back && (
+                                        <Button
+                                            fullWidth
+                                            variant="subtle"
+                                            color="red"
+                                            size="xs"
+                                            onClick={() => runRollback('generate')}
+                                            loading={loading}
+                                            leftSection={<IconHistory size={14} />}
+                                        >
+                                            Rollback Step 3
+                                        </Button>
+                                    )}
+                                </Stack>
                             </Stack>
                         </Paper>
                     </SimpleGrid>

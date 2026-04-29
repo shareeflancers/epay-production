@@ -37,4 +37,12 @@ class SecurityController extends Controller
         return ApiLog::orderBy('created_at', 'desc')
             ->paginate(20);
     }
+
+    public function getLatestSnapshots()
+    {
+        return \App\Models\ProcedureSnapshot::orderBy('created_at', 'desc')
+            ->take(5)
+            ->get()
+            ->keyBy('step_name');
+    }
 }

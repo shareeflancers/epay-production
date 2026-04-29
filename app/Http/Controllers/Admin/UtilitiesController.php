@@ -59,6 +59,9 @@ class UtilitiesController extends Controller
             $encryptedData = $response->json('data');
             $decryptedData = $this->encrypter->decrypt($encryptedData);
 
+            // Take snapshot before processing sync
+            \App\Services\ProcedureService::snapshotSync();
+
             DB::beginTransaction();
 
             switch ($type) {

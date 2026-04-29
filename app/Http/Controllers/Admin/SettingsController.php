@@ -189,6 +189,9 @@ class SettingsController extends Controller
                 ]);
             }
 
+            // Take snapshot before moving
+            \App\Services\ProcedureService::snapshotArchive();
+
             foreach ($activeChallans as $challan) {
                 // Replicate attributes to history model (excluding ID)
                 $history = new \App\Models\ChallanHistory();
@@ -224,6 +227,9 @@ class SettingsController extends Controller
         $now = Carbon::now();
         $dueDate = $now->copy()->day(20)->format('Y-m-d');
         $billingMonth = $now->format('F Y'); // e.g. "April 2026"
+
+        // Take snapshot before generation
+        \App\Services\ProcedureService::snapshotGenerate();
 
         $generated = 0;
         $updated   = 0;

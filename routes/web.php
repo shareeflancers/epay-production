@@ -137,6 +137,17 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/security-audit', [\App\Http\Controllers\Admin\SecurityController::class, 'index'])->name('admin.security-audit');
     Route::get('/security-audit/audit-logs', [\App\Http\Controllers\Admin\SecurityController::class, 'getAuditLogs']);
     Route::get('/security-audit/api-logs', [\App\Http\Controllers\Admin\SecurityController::class, 'getApiLogs']);
+    Route::get('/security-audit/latest-snapshots', [\App\Http\Controllers\Admin\SecurityController::class, 'getLatestSnapshots']);
+
+    // Procedure Rollback
+    Route::post('/procedure/rollback/{id}', function ($id) {
+        try {
+            \App\Services\ProcedureService::rollback($id);
+            return response()->json(['success' => true, 'message' => 'Procedure rolled back successfully.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    })->name('admin.procedure.rollback');
 
 
     // 1Link Testing
