@@ -31,8 +31,8 @@ export default function ApiTesting() {
 
     // Auth Headers
     const [auth, setAuth] = useState({
-        username: '1-Link',
-        password: 'DaX11QEwEvcpIKXVnf'
+        username: 'Admin',
+        password: '2gIrV96X+5IklQjlpNdVA+9lWQaKFFMFNybzZPAQp1w='
     });
 
     // Inputs

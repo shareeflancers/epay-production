@@ -221,6 +221,9 @@ class ChallansController extends Controller
                 $challan->tran_auth_id = $validated['tran_auth_id'];
                 $challan->reserved = $validated['reserved'] ?? $challan->reserved;
                 $challan->save();
+
+                // Sync with external SMS/Fund system
+                \App\Services\SmsSyncService::syncPaidChallan($challan);
             }else{
                 return response()->json([
                     'response_Code' => '09',

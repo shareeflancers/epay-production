@@ -100,27 +100,43 @@ class PublicChallanController extends Controller
     /**
      * Verify a challan's status.
      */
-    public function verify($consumerNumber)
+    public function verify($identifier)
     {
-        $consumer = Consumer::where(function($q) use ($consumerNumber) {
-                $q->where('consumer_number', $consumerNumber)
-                  ->orWhere('identification_number', $consumerNumber);
-            })
-            ->with(['profileDetails' => function ($q) {
-                $q->where('is_active', true);
-            }])
-            ->firstOrFail();
-
-        // Find the most recent challan
-        $challan = ActiveChallan::where('consumer_id', $consumer->id)
-            ->orderBy('created_at', 'desc')
+        // 1. Try to find by Challan Number in Active Challans
+        $challan = ActiveChallan::where('challan_no', $identifier)
+            ->with([
+                'consumer.profileDetails' => function ($q) {
+                    $q->where('is_active', true);
+                },
+                'institution',
+                'region',
+                'schoolClass'
+            ])
             ->first();
 
+        $profile = null;
+
+        // 2. If not in active, check History
         if (!$challan) {
-            abort(404, 'No challan found for this consumer.');
+            $challan = \App\Models\ChallanHistory::where('challan_no', $identifier)
+                ->with(['institution', 'region'])
+                ->first();
+
+            if ($challan) {
+                $consumer = \App\Models\Consumer::where('id', $challan->consumer_id)
+                    ->with(['profileDetails' => function ($q) {
+                        $q->where('is_active', true);
+                    }])
+                    ->first();
+                $profile = $consumer ? $consumer->profileDetails->first() : null;
+            }
+        } else {
+            $profile = $challan->consumer->profileDetails->first();
         }
 
-        $profile = $consumer->profileDetails->first();
+        if (!$challan) {
+            abort(404, 'Invalid Challan Number or record not found.');
+        }
 
         return view('challan.verify', compact('challan', 'profile'));
     }

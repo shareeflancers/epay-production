@@ -45,4 +45,9 @@ return [
         'password' => env('INTERNEL_API_PASSWORD'),
     ],
 
+    'sms' => [
+        'api_key' => env('SMS_API_KEY'),
+        'api_url' => env('SMS_API_URL'),
+    ],
+
 ];

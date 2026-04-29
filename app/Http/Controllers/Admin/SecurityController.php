@@ -40,9 +40,13 @@ class SecurityController extends Controller
 
     public function getLatestSnapshots()
     {
-        return \App\Models\ProcedureSnapshot::orderBy('created_at', 'desc')
-            ->take(5)
-            ->get()
-            ->keyBy('step_name');
+        // Get the latest snapshot for each step_name
+        return \App\Models\ProcedureSnapshot::whereIn('id', function($query) {
+            $query->selectRaw('MAX(id)')
+                ->from('procedure_snapshots')
+                ->groupBy('step_name');
+        })
+        ->get()
+        ->keyBy('step_name');
     }
 }
