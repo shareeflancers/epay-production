@@ -16,6 +16,9 @@ class ApiLog extends Model
         'response_payload',
         'status_code',
         'ip_address',
+        'country',
+        'city',
+        'isp',
         'duration_ms',
     ];
 

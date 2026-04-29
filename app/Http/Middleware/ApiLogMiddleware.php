@@ -16,6 +16,8 @@ class ApiLogMiddleware
         $duration = round((microtime(true) - $startTime) * 1000);
 
         try {
+            $geo = \App\Services\GeoService::resolve($request->ip());
+
             ApiLog::create([
                 'endpoint' => $request->fullUrl(),
                 'method' => $request->method(),
@@ -23,6 +25,9 @@ class ApiLogMiddleware
                 'response_payload' => json_decode($response->getContent(), true),
                 'status_code' => $response->getStatusCode(),
                 'ip_address' => $request->ip(),
+                'country' => $geo['country'],
+                'city' => $geo['city'],
+                'isp' => $geo['isp'],
                 'duration_ms' => $duration,
             ]);
         } catch (\Exception $e) {
