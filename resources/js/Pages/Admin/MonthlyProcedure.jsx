@@ -1,0 +1,236 @@
+import React, { useState } from 'react';
+import {
+    Container,
+    Paper,
+    Title,
+    Text,
+    Button,
+    Stack,
+    Group,
+    Stepper,
+    Alert,
+    ThemeIcon,
+    Box,
+    Badge,
+    Divider,
+    Code,
+    List,
+    SimpleGrid
+} from '@mantine/core';
+import {
+    IconArchive,
+    IconUsers,
+    IconFilePlus,
+    IconCheck,
+    IconAlertCircle,
+    IconCalendarMonth,
+    IconArrowRight
+} from '@tabler/icons-react';
+import { AdminLayout } from '@/Components/Layout';
+import { useTheme } from '@/theme';
+import { adminNavItems } from '@/config/navigation';
+import axios from 'axios';
+import { notifications } from '@mantine/notifications';
+
+export default function MonthlyProcedure() {
+    const { primaryColor } = useTheme();
+    const [active, setActive] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [results, setResults] = useState({
+        step1: null,
+        step2: null,
+        step3: null
+    });
+
+    const runStep1 = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.post('/admin/utilities/archiveChallans');
+            setResults(prev => ({ ...prev, step1: res.data }));
+            notifications.show({
+                title: 'Step 1 Complete',
+                message: res.data.message || 'All unpaid challans archived successfully.',
+                color: 'green'
+            });
+            setActive(1);
+        } catch (err) {
+            notifications.show({
+                title: 'Step 1 Failed',
+                message: err.response?.data?.message || 'Failed to archive challans.',
+                color: 'red'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const runStep2 = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get('/admin/api/fetch/student');
+            setResults(prev => ({ ...prev, step2: res.data }));
+            notifications.show({
+                title: 'Step 2 Complete',
+                message: `Successfully processed students. Inserted: ${res.data.stats.inserted}, Updated: ${res.data.stats.updated}`,
+                color: 'green'
+            });
+            setActive(2);
+        } catch (err) {
+            notifications.show({
+                title: 'Step 2 Failed',
+                message: err.response?.data?.message || 'Failed to fetch student data.',
+                color: 'red'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const runStep3 = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.post('/admin/utilities/generateChallans');
+            setResults(prev => ({ ...prev, step3: res.data }));
+            notifications.show({
+                title: 'Step 3 Complete',
+                message: res.data.message || 'New month challans generated successfully.',
+                color: 'green'
+            });
+            setActive(3);
+        } catch (err) {
+            notifications.show({
+                title: 'Step 3 Failed',
+                message: err.response?.data?.message || 'Failed to generate challans.',
+                color: 'red'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <AdminLayout title="Monthly Procedure" navItems={adminNavItems}>
+            <Container fluid py="xl">
+                <Stack gap="xl">
+                    <Box>
+                        <Group gap="sm" align="center">
+                            <IconCalendarMonth size={32} color={primaryColor.primary} />
+                            <Title order={2}>Monthly Lifecycle Management</Title>
+                            <Badge variant="dot" color="blue" size="lg">PROCEDURE</Badge>
+                        </Group>
+                        <Text c="dimmed" mt="xs">
+                            Follow these steps at the turn of each month to maintain financial accuracy and generate new billing records.
+                        </Text>
+                    </Box>
+
+                    <SimpleGrid cols={{ base: 1, md: 3 }} spacing="lg">
+                        {/* Step 1 Card */}
+                        <Paper p="xl" radius="md" withBorder shadow="sm">
+                            <Stack h="100%" justify="space-between">
+                                <Box>
+                                    <Group justify="space-between" mb="md">
+                                        <ThemeIcon size={44} radius="md" color="blue" variant="light">
+                                            <IconArchive size={26} />
+                                        </ThemeIcon>
+                                        <Badge variant="outline">STEP 1</Badge>
+                                    </Group>
+                                    <Title order={4} mb="xs">Archive History</Title>
+                                    <Text size="sm" c="dimmed" mb="md">
+                                        Move currently unpaid challans to history. Perform around the <strong>27th</strong>.
+                                    </Text>
+                                    <Alert icon={<IconAlertCircle size={16} />} color="blue" variant="light" mb="md">
+                                        Required before new arrears calculation.
+                                    </Alert>
+                                </Box>
+                                <Button
+                                    fullWidth
+                                    leftSection={<IconArchive size={16} />}
+                                    onClick={runStep1}
+                                    loading={loading}
+                                    color="blue"
+                                >
+                                    Execute Archive
+                                </Button>
+                            </Stack>
+                        </Paper>
+
+                        {/* Step 2 Card */}
+                        <Paper p="xl" radius="md" withBorder shadow="sm">
+                            <Stack h="100%" justify="space-between">
+                                <Box>
+                                    <Group justify="space-between" mb="md">
+                                        <ThemeIcon size={44} radius="md" color="cyan" variant="light">
+                                            <IconUsers size={26} />
+                                        </ThemeIcon>
+                                        <Badge variant="outline">STEP 2</Badge>
+                                    </Group>
+                                    <Title order={4} mb="xs">Sync Students</Title>
+                                    <Text size="sm" c="dimmed" mb="md">
+                                        Fetch latest data from SIS API. Perform on the <strong>1st</strong>.
+                                    </Text>
+                                    <Alert icon={<IconAlertCircle size={16} />} color="cyan" variant="light" mb="md">
+                                        Updates profiles and fee categories.
+                                    </Alert>
+                                    {results.step2 && (
+                                        <List size="xs" spacing="xs" mb="md" withPadding>
+                                            <List.Item>New: <Badge size="xs" color="green">{results.step2.stats.inserted}</Badge></List.Item>
+                                            <List.Item>Updated: <Badge size="xs" color="blue">{results.step2.stats.updated}</Badge></List.Item>
+                                        </List>
+                                    )}
+                                </Box>
+                                <Button
+                                    fullWidth
+                                    leftSection={<IconUsers size={16} />}
+                                    onClick={runStep2}
+                                    loading={loading}
+                                    color="cyan"
+                                >
+                                    Sync Data
+                                </Button>
+                            </Stack>
+                        </Paper>
+
+                        {/* Step 3 Card */}
+                        <Paper p="xl" radius="md" withBorder shadow="sm">
+                            <Stack h="100%" justify="space-between">
+                                <Box>
+                                    <Group justify="space-between" mb="md">
+                                        <ThemeIcon size={44} radius="md" color="green" variant="light">
+                                            <IconFilePlus size={26} />
+                                        </ThemeIcon>
+                                        <Badge variant="outline">STEP 3</Badge>
+                                    </Group>
+                                    <Title order={4} mb="xs">Generate Challans</Title>
+                                    <Text size="sm" c="dimmed" mb="md">
+                                        Create new billing records. Perform on <strong>1st working day</strong>.
+                                    </Text>
+                                    <Alert icon={<IconAlertCircle size={16} />} color="green" variant="light" mb="md">
+                                        Calculates current fees + arrears.
+                                    </Alert>
+                                </Box>
+                                <Button
+                                    fullWidth
+                                    leftSection={<IconFilePlus size={16} />}
+                                    onClick={runStep3}
+                                    loading={loading}
+                                    color="green"
+                                >
+                                    Generate Bulk
+                                </Button>
+                            </Stack>
+                        </Paper>
+                    </SimpleGrid>
+
+                    <Paper p="xl" radius="md" withBorder style={{ borderStyle: 'dashed' }}>
+                        <Stack gap="xs">
+                            <Title order={4}>Procedure Guidelines</Title>
+                            <Text size="sm">1. <strong>Archiving</strong>: Ensure all bank data for the previous month is fully synced before archiving.</Text>
+                            <Text size="sm">2. <strong>Syncing</strong>: SIS sync must be complete to ensure students are assigned to their current classes.</Text>
+                            <Text size="sm">3. <strong>Generation</strong>: Arrears calculation relies on the "latest" historical record; never skip Step 1.</Text>
+                        </Stack>
+                    </Paper>
+                </Stack>
+            </Container>
+        </AdminLayout>
+    );
+}

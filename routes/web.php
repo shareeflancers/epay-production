@@ -23,6 +23,7 @@ Route::get('/', function () {
 Route::get('/challan/search', [\App\Http\Controllers\PublicChallanController::class, 'search'])->name('challan.search');
 Route::get('/challan/view/{challan_no}', [\App\Http\Controllers\PublicChallanController::class, 'show'])->name('challan.view');
 Route::get('/challan/verify/{consumer_number}', [\App\Http\Controllers\PublicChallanController::class, 'verify'])->name('challan.verify');
+Route::get('/challans/bulk-print', [\App\Http\Controllers\PublicChallanController::class, 'bulkShow'])->name('challans.bulk-print');
 
 // Authentication routes
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -122,6 +123,21 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/settings/challan-history', [SettingsController::class, 'challanHistoryIndex'])->name('admin.settings.challan-history');
     Route::post('/utilities/generateChallans', [SettingsController::class, 'generateBulkChallans'])->name('admin.utilities.generateChallans');
     Route::post('/utilities/archiveChallans', [SettingsController::class, 'moveToHistory'])->name('admin.utilities.archiveChallans');
+
+    // API & External Systems Testing
+    Route::get('/api-testing', function () {
+        return Inertia::render('Admin/ApiTesting');
+    })->name('admin.api-testing');
+
+    Route::get('/monthly-procedure', function () {
+        return Inertia::render('Admin/MonthlyProcedure');
+    })->name('admin.monthly-procedure');
+
+    // Security Audit
+    Route::get('/security-audit', [\App\Http\Controllers\Admin\SecurityController::class, 'index'])->name('admin.security-audit');
+    Route::get('/security-audit/audit-logs', [\App\Http\Controllers\Admin\SecurityController::class, 'getAuditLogs']);
+    Route::get('/security-audit/api-logs', [\App\Http\Controllers\Admin\SecurityController::class, 'getApiLogs']);
+
 
     // 1Link Testing
     Route::get('/one-link-testing', function () {

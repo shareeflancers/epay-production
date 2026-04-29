@@ -12,3 +12,5 @@ Route::get('/user', function (Request $request) {
 Route::post('/bill-inquiry', [ChallansController::class, 'billInquiry']);
 Route::post('/bill-payment', [ChallansController::class, 'billPayment']);
 Route::get('/fee-categories', [ApiController::class, 'fetchFeeCategories']);
+Route::get('/challan/single', [ApiController::class, 'fetchSingleChallan']);
+Route::post('/challan/bulk', [ApiController::class, 'fetchBulkChallans']);

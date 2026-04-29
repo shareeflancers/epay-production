@@ -15,6 +15,11 @@ export const adminNavItems = [
         href: '/admin/dashboard'
     },
     {
+        label: 'Monthly Procedure',
+        icon: 'calendar',
+        href: '/admin/monthly-procedure'
+    },
+    {
         label: 'Fee Structure',
         icon: 'chart',
         href: '/admin/fee-structure'
@@ -60,18 +65,23 @@ export const adminNavItems = [
         href: '#consumers',
         children: [
             { label: '→ Students', href: '/admin/consumers/student' },
-            { label: '→ Institutions', href: '/admin/consumers/institution' },
-            { label: '→ Inductees', href: '/admin/consumers/inductee' },
         ]
     },
     {
-        label: 'APIs',
-        icon: 'tool',
-        href: '#api',
+        label: 'Security',
+        icon: 'security',
+        href: '#security',
         children: [
-            { label: '→ Fetch Students', href: '/admin/api/fetch/student', action: 'fetch' },
-            { label: '→ Fetch Institutions', href: '/admin/api/fetch/institution', action: 'fetch' },
-            { label: '→ Fetch Inductees', href: '/admin/api/fetch/inductee', action: 'fetch' },
+            { label: '→ Audit Logs', href: '/admin/security-audit' },
+        ]
+    },
+    {
+        label: 'Testing Area',
+        icon: 'tool',
+        href: '#testing',
+        children: [
+            { label: '→ API Sandbox', href: '/admin/api-testing' },
+            { label: '→ 1Link API Test', href: '/admin/one-link-testing' },
         ]
     },
     {
@@ -82,9 +92,6 @@ export const adminNavItems = [
             { label: '→ Category Update', href: '/admin/utilities/categoryBind' },
             { label: '→ Challan Update', href: '/admin/utilities/challanUpdate' },
             { label: '→ Challan History', href: '/admin/settings/challan-history' },
-            { label: '→ Generate Challans', href: '/admin/utilities/generateChallans', action: 'generate' },
-            { label: '→ Archive Challans', href: '/admin/utilities/archiveChallans', action: 'archive' },
-            { label: '→ 1Link API Test', href: '/admin/one-link-testing' },
         ]
     },
 ];

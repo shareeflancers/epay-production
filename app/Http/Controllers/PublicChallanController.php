@@ -124,4 +124,40 @@ class PublicChallanController extends Controller
 
         return view('challan.verify', compact('challan', 'profile'));
     }
+
+    /**
+     * Display multiple challans in a single view for bulk printing.
+     */
+    public function bulkShow(Request $request)
+    {
+        $ids = $request->input('ids');
+        if (!$ids) {
+            abort(400, 'No identification numbers provided.');
+        }
+
+        $idList = explode(',', $ids);
+
+        $challans = ActiveChallan::whereIn('consumer_id', function($query) use ($idList) {
+                $query->select('id')->from('consumers')->whereIn('identification_number', $idList);
+            })
+            ->where('status', 'U')
+            ->with([
+                'consumer.profileDetails' => function ($q) {
+                    $q->where('is_active', true);
+                },
+                'institution',
+                'region',
+                'schoolClass',
+                'level',
+                'yearSession'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        if ($challans->isEmpty()) {
+            abort(404, 'No active unpaid challans found for the provided identification numbers.');
+        }
+
+        return view('challan.bulk_print', compact('challans'));
+    }
 }

@@ -12,7 +12,8 @@ import {
     IconSettings,
     IconDatabase,
     IconList,
-    IconCalendar
+    IconCalendar,
+    IconUserShield
 } from '@tabler/icons-react';
 import { Link, usePage } from '@inertiajs/react';
 import { useLayout } from './AdminLayout';
@@ -54,6 +55,7 @@ const icons = {
     building: () => <IconBuilding size={20} stroke={1.5} />,
     list: () => <IconList size={20} stroke={1.5} />,
     calendar: () => <IconCalendar size={20} stroke={1.5} />,
+    security: () => <IconUserShield size={20} stroke={1.5} />,
 };
 
 const getIcon = (iconName, isActive, themeColor) => {
