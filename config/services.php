@@ -40,4 +40,9 @@ return [
         'password' => env('API_PASSWORD'),
     ],
 
+    'internel' => [
+        'username' => env('INTERNEL_API_USERNAME'),
+        'password' => env('INTERNEL_API_PASSWORD'),
+    ],
+
 ];

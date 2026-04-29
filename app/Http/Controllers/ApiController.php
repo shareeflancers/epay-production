@@ -20,8 +20,8 @@ class ApiController extends Controller
         $username = $request->header('username');
         $password = $request->header('password');
 
-        $validUsername = config('services.onelink.username');
-        $validPassword = config('services.onelink.password');
+        $validUsername = config('services.internel.username');
+        $validPassword = config('services.internel.password');
 
         if (empty($username) || empty($password) ||
             $username !== $validUsername || $password !== $validPassword) {
