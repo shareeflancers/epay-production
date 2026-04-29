@@ -14,8 +14,18 @@ class AuditLogMiddleware
     {
         $response = $next($request);
 
-        // Only log state-changing methods for the audit trail
-        if (in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'])) {
+        $shouldLog = in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE']);
+
+        // Also log public GET requests for oversight
+        if ($request->method() === 'GET') {
+            $path = $request->path();
+            // Log root, challan search, view, and verification
+            if ($path === '/' || str_starts_with($path, 'challan/') || str_starts_with($path, 'challans/')) {
+                $shouldLog = true;
+            }
+        }
+
+        if ($shouldLog) {
             try {
                 AuditLog::create([
                     'user_id' => Auth::id(),
