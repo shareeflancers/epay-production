@@ -21,15 +21,27 @@ class GeoService
             ];
         }
 
-        return Cache::remember("geoip_{$ip}", 86400, function () use ($ip) {
+        return Cache::remember("geoip_{$ip}", 3600, function () use ($ip) {
             try {
-                $response = Http::timeout(2)->get("http://ip-api.com/json/{$ip}?fields=status,country,city,isp");
-                
-                if ($response->successful() && $response->json('status') === 'success') {
+                // Check if it's a private IP range
+                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
                     return [
-                        'country' => $response->json('country'),
-                        'city' => $response->json('city'),
-                        'isp' => $response->json('isp'),
+                        'country' => 'Private',
+                        'city' => 'Local Network',
+                        'isp' => 'Internal'
+                    ];
+                }
+
+                // Using api.iplocation.net as requested
+                $response = Http::withoutVerifying()
+                    ->timeout(5)
+                    ->get("https://api.iplocation.net/?ip=" . $ip);
+
+                if ($response->successful() && $response->json('response_code') === '200') {
+                    return [
+                        'country' => $response->json('country_name') ?? 'Unknown',
+                        'city' => 'N/A', // This API only provides Country and ISP in free tier
+                        'isp' => $response->json('isp') ?? 'Unknown ISP',
                     ];
                 }
             } catch (\Exception $e) {
@@ -38,7 +50,7 @@ class GeoService
 
             return [
                 'country' => 'Unknown',
-                'city' => 'Unknown',
+                'city' => 'Unknown (' . $ip . ')',
                 'isp' => 'Unknown'
             ];
         });
