@@ -27,8 +27,6 @@ class AuditLogMiddleware
 
         if ($shouldLog) {
             try {
-                $geo = \App\Services\GeoService::resolve($request->ip());
-
                 AuditLog::create([
                     'user_id' => Auth::id(),
                     'action' => $request->path(),
@@ -38,9 +36,9 @@ class AuditLogMiddleware
                         'status' => $response->getStatusCode(),
                     ]),
                     'ip_address' => $request->ip(),
-                    'country' => $geo['country'],
-                    'city' => $geo['city'],
-                    'isp' => $geo['isp'],
+                    'country' => null,
+                    'city' => null,
+                    'isp' => null,
                     'user_agent' => $request->userAgent(),
                 ]);
             } catch (\Exception $e) {

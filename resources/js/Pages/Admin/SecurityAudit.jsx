@@ -90,7 +90,6 @@ export default function SecurityAudit({ auditLogs: initialAuditLogs, apiLogs: in
                         <Tabs.List>
                             <Tabs.Tab value="audit" leftSection={<IconUserShield size={16} />}>Admin Actions</Tabs.Tab>
                             <Tabs.Tab value="api" leftSection={<IconTerminal2 size={16} />}>External API Logs</Tabs.Tab>
-                            <Tabs.Tab value="foreign" color="orange" leftSection={<IconWorld size={16} />}>Foreign Access</Tabs.Tab>
                         </Tabs.List>
 
                         <Tabs.Panel value="audit" pt="xl">
@@ -101,7 +100,7 @@ export default function SecurityAudit({ auditLogs: initialAuditLogs, apiLogs: in
                                             <Table.Tr>
                                                 <Table.Th>User</Table.Th>
                                                 <Table.Th>Action</Table.Th>
-                                                <Table.Th>Location & ISP</Table.Th>
+                                                <Table.Th>IP Address</Table.Th>
                                                 <Table.Th>Date & Time</Table.Th>
                                                 <Table.Th>Details</Table.Th>
                                             </Table.Tr>
@@ -119,15 +118,7 @@ export default function SecurityAudit({ auditLogs: initialAuditLogs, apiLogs: in
                                                         <Code color="blue.1" c="blue.9">{log.action}</Code>
                                                     </Table.Td>
                                                     <Table.Td>
-                                                        <Stack gap={0}>
-                                                            <Group gap={4}>
-                                                                <Badge size="xs" color={log.country === 'Pakistan' ? 'green' : 'orange'}>
-                                                                    {log.country}
-                                                                </Badge>
-                                                                <Text size="xs" fw={500}>{log.city}</Text>
-                                                            </Group>
-                                                            <Text size="xs" c="dimmed" truncate style={{ maxWidth: 150 }}>{log.isp}</Text>
-                                                        </Stack>
+                                                        <Code size="xs">{log.ip_address}</Code>
                                                     </Table.Td>
                                                     <Table.Td>
                                                         <Text size="xs">{format(new Date(log.created_at), 'dd MMM yyyy HH:mm:ss')}</Text>
@@ -162,7 +153,7 @@ export default function SecurityAudit({ auditLogs: initialAuditLogs, apiLogs: in
                                             <Table.Tr>
                                                 <Table.Th>Endpoint</Table.Th>
                                                 <Table.Th>Method</Table.Th>
-                                                <Table.Th>Location</Table.Th>
+                                                <Table.Th>IP Address</Table.Th>
                                                 <Table.Th>Status</Table.Th>
                                                 <Table.Th>Time</Table.Th>
                                                 <Table.Th>Timestamp</Table.Th>
@@ -181,10 +172,7 @@ export default function SecurityAudit({ auditLogs: initialAuditLogs, apiLogs: in
                                                         </Badge>
                                                     </Table.Td>
                                                     <Table.Td>
-                                                        <Stack gap={0}>
-                                                            <Text size="xs" fw={600}>{log.country}</Text>
-                                                            <Text size="xs" c="dimmed">{log.city}</Text>
-                                                        </Stack>
+                                                        <Code size="xs">{log.ip_address}</Code>
                                                     </Table.Td>
                                                     <Table.Td>
                                                         <Badge size="xs" color={log.status_code >= 400 ? 'red' : 'green'}>
@@ -221,53 +209,6 @@ export default function SecurityAudit({ auditLogs: initialAuditLogs, apiLogs: in
                             </Paper>
                         </Tabs.Panel>
 
-                        <Tabs.Panel value="foreign" pt="xl">
-                            <Paper withBorder radius="md" p="xl">
-                                <Stack align="center" gap="md" py="xl">
-                                    <IconWorld size={60} color="orange" stroke={1.5} />
-                                    <Title order={3}>Non-Pakistan Traffic Oversight</Title>
-                                    <Text c="dimmed" ta="center" maw={500}>
-                                        This view shows all access attempts originating from outside of Pakistan.
-                                        Use this to identify unauthorized international queries or potential bot scraping.
-                                    </Text>
-                                </Stack>
-                                <Table verticalSpacing="sm" highlightOnHover>
-                                    <Table.Thead>
-                                        <Table.Tr>
-                                            <Table.Th>IP Address</Table.Th>
-                                            <Table.Th>Country</Table.Th>
-                                            <Table.Th>City</Table.Th>
-                                            <Table.Th>ISP</Table.Th>
-                                            <Table.Th>Last Action</Table.Th>
-                                            <Table.Th>Details</Table.Th>
-                                        </Table.Tr>
-                                    </Table.Thead>
-                                    <Table.Tbody>
-                                        {auditData.data.filter(l => l.country !== 'Pakistan' && l.country !== 'Localhost').map((log) => (
-                                            <Table.Tr key={log.id}>
-                                                <Table.Td><Code size="xs">{log.ip_address}</Code></Table.Td>
-                                                <Table.Td><Badge color="red">{log.country}</Badge></Table.Td>
-                                                <Table.Td><Text size="xs">{log.city}</Text></Table.Td>
-                                                <Table.Td><Text size="xs" c="dimmed">{log.isp}</Text></Table.Td>
-                                                <Table.Td><Code size="xs">{log.action}</Code></Table.Td>
-                                                <Table.Td>
-                                                    <ActionIcon variant="light" color="blue" onClick={() => viewDetails(log)}>
-                                                        <IconEye size={16} />
-                                                    </ActionIcon>
-                                                </Table.Td>
-                                            </Table.Tr>
-                                        ))}
-                                        {auditData.data.filter(l => l.country !== 'Pakistan' && l.country !== 'Localhost').length === 0 && (
-                                            <Table.Tr>
-                                                <Table.Td colSpan={6} align="center" py="xl">
-                                                    <Text c="dimmed">No foreign traffic recorded in this page.</Text>
-                                                </Table.Td>
-                                            </Table.Tr>
-                                        )}
-                                    </Table.Tbody>
-                                </Table>
-                            </Paper>
-                        </Tabs.Panel>
                     </Tabs>
                 </Stack>
             </Container>
