@@ -134,16 +134,6 @@
                 </div>
 
                 <div style="font-size: 9px; margin-top: 10px;">
-                    <div style="background: #f8f9fa; padding: 7px; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 8px;">
-                        <strong style="color: #007bff; display: block; margin-bottom: 3px; font-size: 8px;">METHOD 1: ALL BANK APPS / EASYPAISA / JAZZCASH / UPaisa / SADAPAY</strong>
-                        <ol style="margin: 0; padding-left: 12px; font-size: 8px;">
-                            <li>Open your Bank App or Mobile Wallet (EasyPaisa/JazzCash).</li>
-                            <li>Go to <strong>Bill Payment</strong> and select <strong>1Bill</strong>.</li>
-                            <li>Select <strong>Invoice / Challan</strong>.</li>
-                            <li>Enter PSID: <strong style="font-size: 10px; color: #d63384;">{{ '111787474' . $challan->consumer->institution_id . $challan->consumer->consumer_number }}</strong></li>
-                        </ol>
-                    </div>
-
                     <div style="background: #f1fcf4; padding: 7px; border-radius: 8px; border: 1px solid #d1f2d9; margin-bottom: 8px;">
                         <strong style="color: #198754; display: block; margin-bottom: 3px; font-size: 8px;">METHOD 1: ASKARI MOBILE BANKING APP / OVER-THE-COUNTER</strong>
                         <div style="font-size: 8px; line-height: 1.2;">
