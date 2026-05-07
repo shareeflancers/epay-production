@@ -87,7 +87,6 @@ class ApiController extends Controller
             }
 
             $challan = ActiveChallan::where('consumer_id', $consumer->id)
-                ->where('status', 'U')
                 ->orderBy('due_date', 'desc')
                 ->first();
 
@@ -100,6 +99,7 @@ class ApiController extends Controller
                 'data' => [
                     'challan_no' => $challan->challan_no,
                     'print_url' => route('challan.view', ['challan_no' => $challan->challan_no]),
+
                 ]
             ]);
 
