@@ -173,6 +173,7 @@ class ApiController extends Controller
                     $data[$idNumber][] = [
                         'status' => $challan->status,
                         'amount_within_dueDate' => $challan->amount_within_dueDate,
+                        'billing_month' => $challan->reserved ? trim(explode('|', $challan->reserved)[1]) : null,
                     ];
                 }
             }
