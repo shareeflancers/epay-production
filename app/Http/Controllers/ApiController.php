@@ -171,8 +171,8 @@ class ApiController extends Controller
                         $data[$idNumber] = [];
                     }
                     $data[$idNumber][] = [
-                        'challan_no' => $challan->challan_no,
                         'status' => $challan->status,
+                        'amount_within_dueDate' => $challan->amount_within_dueDate,
                     ];
                 }
             }
