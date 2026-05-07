@@ -38,6 +38,7 @@ export default function ApiTesting() {
     // Inputs
     const [singleId, setSingleId] = useState('');
     const [bulkIds, setBulkIds] = useState('');
+    const [statusIds, setStatusIds] = useState('');
 
     const callApi = async (method, endpoint, params = null, body = null) => {
         setLoading(true);
@@ -117,6 +118,7 @@ export default function ApiTesting() {
                             <Tabs.Tab value="categories">1. Fee Categories</Tabs.Tab>
                             <Tabs.Tab value="single">2. Single Challan URL</Tabs.Tab>
                             <Tabs.Tab value="bulk">3. Bulk Print URL</Tabs.Tab>
+                            <Tabs.Tab value="status">4. Challan Status</Tabs.Tab>
                         </Tabs.List>
 
                         <Tabs.Panel value="categories" pt="xl">
@@ -179,6 +181,31 @@ export default function ApiTesting() {
                                         loading={loading}
                                         color={primaryColor}
                                         disabled={!bulkIds}
+                                    >
+                                        Execute API Call
+                                    </Button>
+                                </Stack>
+                            </Paper>
+                        </Tabs.Panel>
+
+                        <Tabs.Panel value="status" pt="xl">
+                            <Paper p="xl" withBorder>
+                                <Stack align="flex-start">
+                                    <Title order={4}>Get Challan Status</Title>
+                                    <Text size="sm">Fetch the status of challans for multiple identification numbers.</Text>
+                                    <Code>GET /api/challans/status</Code>
+                                    <TextInput
+                                        label="Identification Numbers (Comma Separated)"
+                                        placeholder="e.g. 66167364138, 66167364139"
+                                        value={statusIds}
+                                        onChange={(e) => setStatusIds(e.target.value)}
+                                        style={{ width: '100%', maxWidth: 400 }}
+                                    />
+                                    <Button
+                                        onClick={() => callApi('get', '/challans/status', { identification_numbers: statusIds.split(',').map(i => i.trim()).filter(i => i) })}
+                                        loading={loading}
+                                        color={primaryColor}
+                                        disabled={!statusIds}
                                     >
                                         Execute API Call
                                     </Button>

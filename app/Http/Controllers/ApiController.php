@@ -141,4 +141,50 @@ class ApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Server error'], 500);
         }
     }
+
+    public function fetchChallanStatus(Request $request)
+    {
+        try {
+            // Authentication
+            if (!$this->verifyAuth($request)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid authentication credentials'
+                ], 401);
+            }
+
+            $ids = $request->input('identification_numbers');
+            if (!$ids || !is_array($ids)) {
+                return response()->json(['success' => false, 'message' => 'identification_numbers must be an array'], 400);
+            }
+
+            $consumers = Consumer::whereIn('identification_number', $ids)->get(['id', 'identification_number']);
+            $consumerMap = $consumers->pluck('identification_number', 'id')->toArray();
+
+            $challans = ActiveChallan::whereIn('consumer_id', array_keys($consumerMap))->get();
+
+            $data = [];
+            foreach ($challans as $challan) {
+                $idNumber = $consumerMap[$challan->consumer_id] ?? null;
+                if ($idNumber) {
+                    if (!isset($data[$idNumber])) {
+                        $data[$idNumber] = [];
+                    }
+                    $data[$idNumber][] = [
+                        'challan_no' => $challan->challan_no,
+                        'status' => $challan->status,
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+
+        } catch (Throwable $e) {
+            Log::error('API Error in fetchChallanStatus: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error'], 500);
+        }
+    }
 }
