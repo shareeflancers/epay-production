@@ -13,6 +13,12 @@ export default defineConfig({
         tailwindcss(),
     ],
     server: {
+        // --- ADD THIS SECTION ---
+        hmr: {
+            host: 'finch-runaround-bamboo.ngrok-free.dev',
+            protocol: 'wss', // Uses secure websockets
+        },
+        // -------------------------
         watch: {
             ignored: ['**/storage/framework/views/**'],
         },

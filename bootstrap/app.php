@@ -20,7 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ApiLogMiddleware::class,
         ]);
         $middleware->redirectGuestsTo('/login');
-    })
-    ->withExceptions(function (Exceptions $exceptions): void {
+    })->withMiddleware(function (Middleware $middleware) {
+        $middleware->trustProxies(at: '*');
+    })->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
