@@ -87,20 +87,25 @@ class ApiController extends Controller
             }
 
             $challan = ActiveChallan::where('consumer_id', $consumer->id)
-                ->where('status', 'U')
                 ->orderBy('due_date', 'desc')
                 ->first();
 
             if (!$challan) {
-                return response()->json(['success' => false, 'message' => 'No active unpaid challan found'], 404);
+                return response()->json(['success' => false, 'message' => 'No active challan found'], 404);
+            }
+
+            $data = [
+                'challan_no' => $challan->challan_no,
+                'status' => $challan->status,
+            ];
+
+            if ($challan->status === 'U') {
+                $data['print_url'] = route('challan.view', ['challan_no' => $challan->challan_no]);
             }
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'challan_no' => $challan->challan_no,
-                    'print_url' => route('challan.view', ['challan_no' => $challan->challan_no]),
-                ]
+                'data' => $data
             ]);
 
         } catch (Throwable $e) {
