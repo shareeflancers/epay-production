@@ -275,6 +275,7 @@ export default function OneLinkTesting() {
                                             label="Password"
                                             placeholder="API Password"
                                             size="sm"
+                                            autoComplete="current-password"
                                             {...inquiryForm.getInputProps('password')}
                                         />
                                     </Group>
@@ -349,6 +350,7 @@ export default function OneLinkTesting() {
                                             label="Password"
                                             placeholder="API Password"
                                             size="sm"
+                                            autoComplete="current-password"
                                             {...paymentForm.getInputProps('password')}
                                         />
                                     </Group>
