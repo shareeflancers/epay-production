@@ -14,10 +14,10 @@ class SecurityController extends Controller
     {
         $auditLogs = AuditLog::with('user')
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->paginate(100);
 
         $apiLogs = ApiLog::orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->paginate(100);
 
         return Inertia::render('Admin/SecurityAudit', [
             'auditLogs' => $auditLogs,

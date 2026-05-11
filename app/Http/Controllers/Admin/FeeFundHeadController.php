@@ -30,7 +30,7 @@ class FeeFundHeadController extends Controller
         $query->orderBy($sortField, $sortDirection);
 
         // Pagination
-        $perPage = $request->get('per_page', 10);
+        $perPage = $request->get('per_page', 100);
         $heads = $query->paginate($perPage)->withQueryString();
 
         // Transform heads for display if needed (e.g., join array with commas)
@@ -61,8 +61,8 @@ class FeeFundHeadController extends Controller
             ]);
 
             // Convert to array if it's a string, or just use if it's already an array
-            $feeHeads = is_array($validated['fee_head']) 
-                ? $validated['fee_head'] 
+            $feeHeads = is_array($validated['fee_head'])
+                ? $validated['fee_head']
                 : array_map('trim', explode(',', $validated['fee_head']));
 
             // Filter out empty values
@@ -100,8 +100,8 @@ class FeeFundHeadController extends Controller
             ]);
 
             // Convert to array if it's a string, or just use if it's already an array
-            $feeHeads = is_array($validated['fee_head']) 
-                ? $validated['fee_head'] 
+            $feeHeads = is_array($validated['fee_head'])
+                ? $validated['fee_head']
                 : array_map('trim', explode(',', $validated['fee_head']));
 
             // Filter out empty values

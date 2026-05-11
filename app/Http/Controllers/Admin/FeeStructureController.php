@@ -64,7 +64,7 @@ class FeeStructureController extends Controller
         }
 
         // Pagination
-        $perPage = $request->get('per_page', 8);
+        $perPage = $request->get('per_page', 100);
         $structures = $query->paginate($perPage)->withQueryString();
 
         // Get categories for the form dropdown

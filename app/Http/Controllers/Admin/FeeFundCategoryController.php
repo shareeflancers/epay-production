@@ -34,7 +34,7 @@ class FeeFundCategoryController extends Controller
         $query->orderBy($sortField, $sortDirection);
 
         // Pagination
-        $perPage = $request->get('per_page', 8);
+        $perPage = $request->get('per_page', 100);
         $categories = $query->paginate($perPage)->withQueryString();
 
         return Inertia::render('Admin/FeeFundCategory/Index', [

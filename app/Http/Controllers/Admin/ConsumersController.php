@@ -87,7 +87,7 @@ class ConsumersController extends Controller
         $query->orderBy($sortField, $sortDirection);
 
         // Pagination
-        $perPage = $request->get('per_page', 8);
+        $perPage = $request->get('per_page', 100);
         $consumers = $query->paginate($perPage)->withQueryString();
 
         // Return view based on type (capitalizing first letter for proper view path)

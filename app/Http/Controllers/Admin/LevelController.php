@@ -31,7 +31,7 @@ class LevelController extends Controller
         $query->orderBy($sortField, $sortDirection);
 
         // Pagination
-        $perPage = $request->get('per_page', 10);
+        $perPage = $request->get('per_page', 100);
         $levels = $query->paginate($perPage)->withQueryString();
 
         return Inertia::render('Admin/Levels/Index', [
