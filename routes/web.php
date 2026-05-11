@@ -121,6 +121,7 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/settings/year-sessions', [SettingsController::class, 'getYearSessions'])->name('admin.settings.year-sessions');
     Route::get('/settings/challan-metadata', [SettingsController::class, 'getChallanMetadata'])->name('admin.settings.challan-metadata');
     Route::get('/settings/challan-history', [SettingsController::class, 'challanHistoryIndex'])->name('admin.settings.challan-history');
+    Route::post('/settings/retry-sms-sync', [SettingsController::class, 'retrySmsSync'])->name('admin.settings.retry-sms-sync');
     Route::post('/utilities/generateChallans', [SettingsController::class, 'generateBulkChallans'])->name('admin.utilities.generateChallans');
     Route::post('/utilities/archiveChallans', [SettingsController::class, 'moveToHistory'])->name('admin.utilities.archiveChallans');
 

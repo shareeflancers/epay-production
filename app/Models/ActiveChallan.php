@@ -46,6 +46,7 @@ class ActiveChallan extends Model
         'year_session_id',
         'challan_snapshot',
         'is_active',
+        'sms_sync',
     ];
 
     /**
@@ -137,16 +138,6 @@ class ActiveChallan extends Model
     {
         return $this->belongsTo(YearSession::class, 'year_session_id');
     }
-
-    /**
-     * Get the transaction ledger histories.
-     */
-    /*
-    public function transactionLedgerHistories(): HasMany
-    {
-        return $this->hasMany(ChallanTransactionLedgerHistory::class, 'challan_id');
-    }
-    */
 
     /*
     |--------------------------------------------------------------------------

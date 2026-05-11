@@ -33,6 +33,7 @@ class ChallanHistory extends Model
         'year_session_id',
         'challan_snapshot',
         'is_active',
+        'sms_sync',
     ];
 
     protected function casts(): array
@@ -61,5 +62,10 @@ class ChallanHistory extends Model
     public function region()
     {
         return $this->belongsTo(Region::class);
+    }
+
+    public function feeFundStructure()
+    {
+        return $this->belongsTo(FeeFundStructure::class, 'fee_fund_structure_id');
     }
 }

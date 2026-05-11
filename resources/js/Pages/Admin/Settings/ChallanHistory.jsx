@@ -31,6 +31,15 @@ const statusMap = {
 export default function ChallanHistory({ activeChallans, archivedChallans, filters }) {
     const [activeTab, setActiveTab] = useState('active');
     const [snapshotModal, setSnapshotModal] = useState({ opened: false, data: null, row: null });
+    const [isRetryingSync, setIsRetryingSync] = useState(false);
+
+    const handleRetrySync = () => {
+        setIsRetryingSync(true);
+        router.post('/admin/settings/retry-sms-sync', {}, {
+            onFinish: () => setIsRetryingSync(false),
+            preserveScroll: true
+        });
+    };
 
     const formatDate = (dateStr) => {
         if (!dateStr) return 'N/A';
@@ -85,6 +94,18 @@ export default function ChallanHistory({ activeChallans, archivedChallans, filte
             }
         },
         {
+            key: 'sms_sync',
+            label: 'SMS Sync',
+            render: (val, row) => {
+                if (row.status !== 'P') return <Text size="sm" c="dimmed">-</Text>;
+                return val ? (
+                    <Badge color="green" size="sm" variant="light">Synced</Badge>
+                ) : (
+                    <Badge color="red" size="sm" variant="light">Failed</Badge>
+                );
+            }
+        },
+        {
             key: 'challan_snapshot',
             label: 'Snapshot',
             render: (val, row) => (
@@ -121,6 +142,18 @@ export default function ChallanHistory({ activeChallans, archivedChallans, filte
             render: (val) => new Date(val).toLocaleString()
         },
         {
+            key: 'sms_sync',
+            label: 'SMS Sync',
+            render: (val, row) => {
+                if (row.status !== 'P') return <Text size="sm" c="dimmed">-</Text>;
+                return val ? (
+                    <Badge color="green" size="sm" variant="light">Synced</Badge>
+                ) : (
+                    <Badge color="red" size="sm" variant="light">Failed</Badge>
+                );
+            }
+        },
+        {
             key: 'challan_snapshot',
             label: 'Snapshot',
             render: (val, row) => (
@@ -154,12 +187,20 @@ export default function ChallanHistory({ activeChallans, archivedChallans, filte
             <Head title="Challan History" />
 
             <Stack gap="lg">
-                <Box>
-                    <Title order={2} mb={4}>Challan Dashboard</Title>
-                    <Text c="dimmed" size="sm">
-                        View current active challans and historical archived records.
-                    </Text>
-                </Box>
+                <Group justify="space-between" align="flex-start">
+                    <Box>
+                        <Title order={2} mb={4}>Challan Dashboard</Title>
+                        <Text c="dimmed" size="sm">
+                            View current active challans and historical archived records.
+                        </Text>
+                    </Box>
+                    <ThemedButton
+                        onClick={handleRetrySync}
+                        loading={isRetryingSync}
+                    >
+                        Retry Failed SMS Sync
+                    </ThemedButton>
+                </Group>
 
                 <Tabs value={activeTab} onChange={setActiveTab} variant="outline" radius="md">
                     <Tabs.List>
@@ -217,9 +258,16 @@ export default function ChallanHistory({ activeChallans, archivedChallans, filte
                                 </Box>
                                 <Box>
                                     <Text size="xs" c="dimmed">Status</Text>
-                                    <Badge size="sm" color={statusMap[snapshotModal.row?.status]?.color || 'gray'}>
-                                        {statusMap[snapshotModal.row?.status]?.label || snapshotModal.row?.status}
-                                    </Badge>
+                                    <Group gap="xs">
+                                        <Badge size="sm" color={statusMap[snapshotModal.row?.status]?.color || 'gray'}>
+                                            {statusMap[snapshotModal.row?.status]?.label || snapshotModal.row?.status}
+                                        </Badge>
+                                        {snapshotModal.row?.status === 'P' && (
+                                            <Badge size="sm" color={snapshotModal.row?.sms_sync ? 'green' : 'red'} variant="light">
+                                                {snapshotModal.row?.sms_sync ? 'SMS Synced' : 'SMS Failed'}
+                                            </Badge>
+                                        )}
+                                    </Group>
                                 </Box>
                                 <Box>
                                     <Text size="xs" c="dimmed">Institution (ID: {snapshotModal.row?.institution_id || 'N/A'})</Text>

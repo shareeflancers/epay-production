@@ -222,8 +222,8 @@ class ChallansController extends Controller
                 $challan->reserved = $validated['reserved'] ?? $challan->reserved;
                 $challan->save();
 
-                // Sync with external SMS/Fund system
-                \App\Services\SmsSyncService::syncPaidChallan($challan);
+                // Sync with external SMS/Fund system async
+                \App\Jobs\SyncSmsJob::dispatch($challan);
             }else{
                 return response()->json([
                     'response_Code' => '09',

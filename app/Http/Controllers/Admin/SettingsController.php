@@ -558,9 +558,6 @@ class SettingsController extends Controller
     }
 
     /**
-     * Update a single challan's editable fields.
-     */
-    /**
      * Get all metadata needed for challan updates (dropdowns).
      */
     public function getChallanMetadata()
@@ -648,6 +645,38 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Failed to update challan: ' . $e->getMessage());
+        }
+    }
+
+    public function retrySmsSync()
+    {
+        try {
+            $activeCount = 0;
+            $historyCount = 0;
+
+            // Process Active Challans
+            ActiveChallan::where('status', 'P')
+                ->where('sms_sync', 0)
+                ->chunk(100, function ($challans) use (&$activeCount) {
+                    foreach ($challans as $challan) {
+                        \App\Jobs\SyncSmsJob::dispatch($challan);
+                        $activeCount++;
+                    }
+                });
+
+            // Process Challan History
+            \App\Models\ChallanHistory::where('status', 'P')
+                ->where('sms_sync', 0)
+                ->chunk(100, function ($challans) use (&$historyCount) {
+                    foreach ($challans as $challan) {
+                        \App\Jobs\SyncSmsJob::dispatch($challan);
+                        $historyCount++;
+                    }
+                });
+
+            return redirect()->back()->with('success', "Dispatched {$activeCount} active and {$historyCount} history challans for SMS sync retry.");
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to retry SMS sync: ' . $e->getMessage());
         }
     }
 }

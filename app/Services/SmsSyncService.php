@@ -11,7 +11,7 @@ class SmsSyncService
     /**
      * Sync a paid challan's head-wise amounts to the external SMS/Fund system.
      */
-    public static function syncPaidChallan(ActiveChallan $challan)
+    public static function syncPaidChallan($challan)
     {
         try {
             // Ensure challan is paid
@@ -77,7 +77,7 @@ class SmsSyncService
             ])->timeout(10)->post($apiUrl . '/api/funds/transaction-in', $payload);
 
             if ($response->successful()) {
-                $challan->update(['sms_update' => true]);
+                $challan->update(['sms_sync' => 1]);
                 Log::info("SmsSync: Successfully synced challan #{$challan->challan_no} to SMS system.");
                 return true;
             } else {

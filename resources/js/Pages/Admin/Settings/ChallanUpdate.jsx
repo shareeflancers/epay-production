@@ -205,6 +205,11 @@ export default function ChallanUpdate() {
                                         <Badge color={statusInfo.color} variant="light">
                                             {statusInfo.label}
                                         </Badge>
+                                        {challan.status === 'P' && (
+                                            <Badge color={challan.sms_sync ? 'green' : 'red'} variant="light" size="xs">
+                                                {challan.sms_sync ? 'SMS Synced' : 'SMS Failed'}
+                                            </Badge>
+                                        )}
                                         <Badge color={feeInfo.color} variant="outline" size="xs">
                                             {feeInfo.label}
                                         </Badge>
