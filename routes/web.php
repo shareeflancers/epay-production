@@ -139,14 +139,24 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/security-audit/audit-logs', [\App\Http\Controllers\Admin\SecurityController::class, 'getAuditLogs']);
     Route::get('/security-audit/api-logs', [\App\Http\Controllers\Admin\SecurityController::class, 'getApiLogs']);
     Route::get('/security-audit/latest-snapshots', [\App\Http\Controllers\Admin\SecurityController::class, 'getLatestSnapshots']);
+    Route::get('/security-audit/snapshot-history', [\App\Http\Controllers\Admin\SecurityController::class, 'getSnapshotHistory']);
 
     // Procedure Rollback
     Route::post('/procedure/rollback/{id}', function ($id) {
+        set_time_limit(300); // Increase to 5 minutes
+        ini_set('memory_limit', '512M');
+        
         try {
             \App\Services\ProcedureService::rollback($id);
             return response()->json(['success' => true, 'message' => 'Procedure rolled back successfully.']);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            \Illuminate\Support\Facades\Log::error('Rollback failed for snapshot ' . $id . ': ' . $e->getMessage(), [
+                'exception' => $e
+            ]);
+            return response()->json([
+                'success' => false, 
+                'message' => 'Rollback failed: ' . $e->getMessage()
+            ], 500);
         }
     })->name('admin.procedure.rollback');
 

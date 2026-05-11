@@ -73,145 +73,139 @@ export default function SecurityAudit({ auditLogs: initialAuditLogs, apiLogs: in
 
     return (
         <AdminLayout title="Security Audit" navItems={adminNavItems}>
-            <Container fluid py="xl">
-                <Stack gap="xl">
-                    <Box>
-                        <Group gap="sm" align="center">
-                            <IconShieldLock size={32} color={primaryColor.primary} />
-                            <Title order={2}>Security & Audit Oversight</Title>
-                            <Badge variant="filled" color="red" size="lg">ADMIN OVERSIGHT</Badge>
-                        </Group>
-                        <Text c="dimmed" mt="xs">
-                            Monitor all administrative actions and external system API calls for accountability and security auditing.
-                        </Text>
-                    </Box>
+            <Stack gap="lg">
+                <Box>
+                    <Title order={2} mb={4}>Security & Audit Oversight</Title>
+                    <Text c="dimmed" size="sm">
+                       Monitor all administrative actions and external system API calls for accountability and security auditing.
+                    </Text>
+                </Box>
 
-                    <Tabs defaultValue="audit" variant="outline" radius="md">
-                        <Tabs.List>
-                            <Tabs.Tab value="audit" leftSection={<IconUserShield size={16} />}>Admin Actions</Tabs.Tab>
-                            <Tabs.Tab value="api" leftSection={<IconTerminal2 size={16} />}>External API Logs</Tabs.Tab>
-                        </Tabs.List>
+                <Tabs defaultValue="audit" variant="outline" radius="md">
+                    <Tabs.List>
+                        <Tabs.Tab value="audit" leftSection={<IconUserShield size={16} />}>Admin Actions</Tabs.Tab>
+                        <Tabs.Tab value="api" leftSection={<IconTerminal2 size={16} />}>External API Logs</Tabs.Tab>
+                    </Tabs.List>
 
-                        <Tabs.Panel value="audit" pt="xl">
-                            <Paper withBorder radius="md">
-                                <ScrollArea h={600}>
-                                    <Table verticalSpacing="sm" highlightOnHover>
-                                        <Table.Thead style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
-                                            <Table.Tr>
-                                                <Table.Th>User</Table.Th>
-                                                <Table.Th>Action</Table.Th>
-                                                <Table.Th>IP Address</Table.Th>
-                                                <Table.Th>Date & Time</Table.Th>
-                                                <Table.Th>Details</Table.Th>
+                    <Tabs.Panel value="audit" pt="xl">
+                        <Paper withBorder radius="md">
+                            <ScrollArea h={600}>
+                                <Table verticalSpacing="sm" highlightOnHover>
+                                    <Table.Thead style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
+                                        <Table.Tr>
+                                            <Table.Th>User</Table.Th>
+                                            <Table.Th>Action</Table.Th>
+                                            <Table.Th>IP Address</Table.Th>
+                                            <Table.Th>Date & Time</Table.Th>
+                                            <Table.Th>Details</Table.Th>
+                                        </Table.Tr>
+                                    </Table.Thead>
+                                    <Table.Tbody>
+                                        {auditData.data.map((log) => (
+                                            <Table.Tr key={log.id}>
+                                                <Table.Td>
+                                                    <Stack gap={0}>
+                                                        <Text size="sm" fw={500}>{log.user?.name || 'Public Visitor'}</Text>
+                                                        <Text size="xs" c="dimmed">{log.user?.email || 'N/A'}</Text>
+                                                    </Stack>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Code color="blue.1" c="blue.9">{log.action}</Code>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Code size="xs">{log.ip_address}</Code>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Text size="xs">{format(new Date(log.created_at), 'dd MMM yyyy HH:mm:ss')}</Text>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <ActionIcon variant="light" color="blue" onClick={() => viewDetails(log)}>
+                                                        <IconEye size={16} />
+                                                    </ActionIcon>
+                                                </Table.Td>
                                             </Table.Tr>
-                                        </Table.Thead>
-                                        <Table.Tbody>
-                                            {auditData.data.map((log) => (
-                                                <Table.Tr key={log.id}>
-                                                    <Table.Td>
-                                                        <Stack gap={0}>
-                                                            <Text size="sm" fw={500}>{log.user?.name || 'Public Visitor'}</Text>
-                                                            <Text size="xs" c="dimmed">{log.user?.email || 'N/A'}</Text>
-                                                        </Stack>
-                                                    </Table.Td>
-                                                    <Table.Td>
-                                                        <Code color="blue.1" c="blue.9">{log.action}</Code>
-                                                    </Table.Td>
-                                                    <Table.Td>
-                                                        <Code size="xs">{log.ip_address}</Code>
-                                                    </Table.Td>
-                                                    <Table.Td>
-                                                        <Text size="xs">{format(new Date(log.created_at), 'dd MMM yyyy HH:mm:ss')}</Text>
-                                                    </Table.Td>
-                                                    <Table.Td>
-                                                        <ActionIcon variant="light" color="blue" onClick={() => viewDetails(log)}>
-                                                            <IconEye size={16} />
-                                                        </ActionIcon>
-                                                    </Table.Td>
-                                                </Table.Tr>
-                                            ))}
-                                        </Table.Tbody>
-                                    </Table>
-                                </ScrollArea>
-                                <Divider />
-                                <Group justify="center" py="md">
-                                    <Pagination
-                                        total={auditData.last_page}
-                                        value={auditData.current_page}
-                                        onChange={(p) => fetchAuditLogs(p)}
-                                        color={primaryColor.primary}
-                                    />
-                                </Group>
-                            </Paper>
-                        </Tabs.Panel>
+                                        ))}
+                                    </Table.Tbody>
+                                </Table>
+                            </ScrollArea>
+                            <Divider />
+                            <Group justify="center" py="md">
+                                <Pagination
+                                    total={auditData.last_page}
+                                    value={auditData.current_page}
+                                    onChange={(p) => fetchAuditLogs(p)}
+                                    color={primaryColor.primary}
+                                />
+                            </Group>
+                        </Paper>
+                    </Tabs.Panel>
 
-                        <Tabs.Panel value="api" pt="xl">
-                            <Paper withBorder radius="md">
-                                <ScrollArea h={600}>
-                                    <Table verticalSpacing="sm" highlightOnHover>
-                                        <Table.Thead style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
-                                            <Table.Tr>
-                                                <Table.Th>Endpoint</Table.Th>
-                                                <Table.Th>Method</Table.Th>
-                                                <Table.Th>IP Address</Table.Th>
-                                                <Table.Th>Status</Table.Th>
-                                                <Table.Th>Time</Table.Th>
-                                                <Table.Th>Timestamp</Table.Th>
-                                                <Table.Th>View</Table.Th>
+                    <Tabs.Panel value="api" pt="xl">
+                        <Paper withBorder radius="md">
+                            <ScrollArea h={600}>
+                                <Table verticalSpacing="sm" highlightOnHover>
+                                    <Table.Thead style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
+                                        <Table.Tr>
+                                            <Table.Th>Endpoint</Table.Th>
+                                            <Table.Th>Method</Table.Th>
+                                            <Table.Th>IP Address</Table.Th>
+                                            <Table.Th>Status</Table.Th>
+                                            <Table.Th>Time</Table.Th>
+                                            <Table.Th>Timestamp</Table.Th>
+                                            <Table.Th>View</Table.Th>
+                                        </Table.Tr>
+                                    </Table.Thead>
+                                    <Table.Tbody>
+                                        {apiData.data.map((log) => (
+                                            <Table.Tr key={log.id}>
+                                                <Table.Td style={{ maxWidth: 200 }}>
+                                                    <Text size="xs" truncate title={log.endpoint}>{log.endpoint}</Text>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Badge size="xs" variant="outline" color={log.method === 'GET' ? 'blue' : 'green'}>
+                                                        {log.method}
+                                                    </Badge>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Code size="xs">{log.ip_address}</Code>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Badge size="xs" color={log.status_code >= 400 ? 'red' : 'green'}>
+                                                        {log.status_code}
+                                                    </Badge>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Text size="xs" fw={500} c={log.duration_ms > 1000 ? 'red' : 'inherit'}>
+                                                        {log.duration_ms}ms
+                                                    </Text>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <Text size="xs">{format(new Date(log.created_at), 'dd MMM yyyy HH:mm:ss')}</Text>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                    <ActionIcon variant="light" color="cyan" onClick={() => viewDetails(log)}>
+                                                        <IconEye size={16} />
+                                                    </ActionIcon>
+                                                </Table.Td>
                                             </Table.Tr>
-                                        </Table.Thead>
-                                        <Table.Tbody>
-                                            {apiData.data.map((log) => (
-                                                <Table.Tr key={log.id}>
-                                                    <Table.Td style={{ maxWidth: 200 }}>
-                                                        <Text size="xs" truncate title={log.endpoint}>{log.endpoint}</Text>
-                                                    </Table.Td>
-                                                    <Table.Td>
-                                                        <Badge size="xs" variant="outline" color={log.method === 'GET' ? 'blue' : 'green'}>
-                                                            {log.method}
-                                                        </Badge>
-                                                    </Table.Td>
-                                                    <Table.Td>
-                                                        <Code size="xs">{log.ip_address}</Code>
-                                                    </Table.Td>
-                                                    <Table.Td>
-                                                        <Badge size="xs" color={log.status_code >= 400 ? 'red' : 'green'}>
-                                                            {log.status_code}
-                                                        </Badge>
-                                                    </Table.Td>
-                                                    <Table.Td>
-                                                        <Text size="xs" fw={500} c={log.duration_ms > 1000 ? 'red' : 'inherit'}>
-                                                            {log.duration_ms}ms
-                                                        </Text>
-                                                    </Table.Td>
-                                                    <Table.Td>
-                                                        <Text size="xs">{format(new Date(log.created_at), 'dd MMM yyyy HH:mm:ss')}</Text>
-                                                    </Table.Td>
-                                                    <Table.Td>
-                                                        <ActionIcon variant="light" color="cyan" onClick={() => viewDetails(log)}>
-                                                            <IconEye size={16} />
-                                                        </ActionIcon>
-                                                    </Table.Td>
-                                                </Table.Tr>
-                                            ))}
-                                        </Table.Tbody>
-                                    </Table>
-                                </ScrollArea>
-                                <Divider />
-                                <Group justify="center" py="md">
-                                    <Pagination
-                                        total={apiData.last_page}
-                                        value={apiData.current_page}
-                                        onChange={(p) => fetchApiLogs(p)}
-                                        color={primaryColor.primary}
-                                    />
-                                </Group>
-                            </Paper>
-                        </Tabs.Panel>
+                                        ))}
+                                    </Table.Tbody>
+                                </Table>
+                            </ScrollArea>
+                            <Divider />
+                            <Group justify="center" py="md">
+                                <Pagination
+                                    total={apiData.last_page}
+                                    value={apiData.current_page}
+                                    onChange={(p) => fetchApiLogs(p)}
+                                    color={primaryColor.primary}
+                                />
+                            </Group>
+                        </Paper>
+                    </Tabs.Panel>
 
-                    </Tabs>
-                </Stack>
-            </Container>
+                </Tabs>
+            </Stack>
 
             <Modal
                 opened={modalOpened}

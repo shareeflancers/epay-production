@@ -31,14 +31,14 @@ class ProcedureService
      */
     public static function snapshotSync()
     {
-        // Snapshot everything is too large, but for 1-click rollback of sync, 
+        // Snapshot everything is too large, but for 1-click rollback of sync,
         // we might want to just store the "state before sync" for existing consumers.
         // For simplicity in this demo, let's store the count and a timestamp to allow "undoing" new entries.
         $data = [
             'before_count' => Consumer::count(),
             'timestamp' => now()->toDateTimeString(),
         ];
-        
+
         return ProcedureSnapshot::create([
             'step_name' => 'sync',
             'snapshot_data' => $data,
@@ -64,8 +64,9 @@ class ProcedureService
      */
     public static function rollback($snapshotId)
     {
+        Log::info("Starting rollback for snapshot ID: {$snapshotId}");
         $snapshot = ProcedureSnapshot::findOrFail($snapshotId);
-        
+
         if ($snapshot->is_rolled_back) {
             throw new \Exception('This procedure has already been rolled back.');
         }
@@ -100,7 +101,7 @@ class ProcedureService
         foreach ($data as $item) {
             // Restore to active_challans
             ActiveChallan::create($item);
-            
+
             // Delete from history if it exists
             ChallanHistory::where('challan_no', $item['challan_no'])->delete();
         }
@@ -109,14 +110,14 @@ class ProcedureService
     private static function rollbackSync($snapshot)
     {
         $timestamp = $snapshot->snapshot_data['timestamp'];
-        
+
         // Delete consumers created AFTER the sync started
         $newConsumers = Consumer::where('created_at', '>=', $timestamp)->get();
         foreach ($newConsumers as $c) {
             ProfileDetail::where('consumer_id', $c->id)->delete();
             $c->delete();
         }
-        
+
         // Note: Reverting UPDATED records is complex without a full row-by-row snapshot.
         // For now, we focus on removing the new batch.
     }

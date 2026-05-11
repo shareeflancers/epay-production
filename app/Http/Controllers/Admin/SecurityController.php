@@ -49,4 +49,11 @@ class SecurityController extends Controller
         ->get()
         ->keyBy('step_name');
     }
+
+    public function getSnapshotHistory(Request $request)
+    {
+        $perPage = $request->get('per_page', 10);
+        return \App\Models\ProcedureSnapshot::orderBy('created_at', 'desc')
+            ->paginate($perPage);
+    }
 }
