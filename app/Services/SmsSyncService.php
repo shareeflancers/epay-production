@@ -14,6 +14,15 @@ class SmsSyncService
     public static function syncPaidChallan($challan)
     {
         try {
+            // Refresh model to ensure we have the latest status from DB
+            $challan->refresh();
+
+            // Idempotency check: Skip if already synced
+            if ($challan->sms_sync) {
+                Log::info("SmsSync: Challan #{$challan->challan_no} is already synced. Skipping.");
+                return true;
+            }
+
             // Ensure challan is paid
             if ($challan->status !== 'P') {
                 Log::warning("SmsSync: Attempted to sync unpaid challan #{$challan->challan_no}");
