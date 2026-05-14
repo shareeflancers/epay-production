@@ -29,6 +29,7 @@ class ChallanHistory extends Model
         'fee_fund_head_id',
         'fee_fund_structure_id',
         'school_class_id',
+        'section',
         'level_id',
         'year_session_id',
         'challan_snapshot',

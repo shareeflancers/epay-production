@@ -249,12 +249,10 @@ class ApiController extends Controller
                 case 'class_section':
                     $results = DB::table('active_challans')
                         ->join('school_classes', 'active_challans.school_class_id', '=', 'school_classes.id')
-                        ->join('consumers', 'active_challans.consumer_id', '=', 'consumers.id')
-                        ->join('profile_details', 'consumers.id', '=', 'profile_details.consumer_id')
                         ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
-                            DB::raw('CONCAT(active_challans.institution_id, "-", active_challans.school_class_id, "-", profile_details.section) as group_id'),
-                            DB::raw('CONCAT(school_classes.name, " - ", profile_details.section) as group_name'),
+                            DB::raw('CONCAT(active_challans.institution_id, "-", active_challans.school_class_id, "-", active_challans.section) as group_id'),
+                            DB::raw('CONCAT(school_classes.name, " - ", active_challans.section) as group_name'),
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
@@ -267,7 +265,7 @@ class ApiController extends Controller
                         $results->where('active_challans.school_class_id', $classId);
                     }
                     if ($section) {
-                        $results->where('profile_details.section', $section);
+                        $results->where('active_challans.section', $section);
                     }
 
                     $data = $this->formatAnalyticsData($results->groupBy('group_id', 'group_name', 'fee_fund_category.category_title')->get());

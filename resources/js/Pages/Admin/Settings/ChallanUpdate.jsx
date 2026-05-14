@@ -73,6 +73,7 @@ export default function ChallanUpdate() {
         fee_fund_category_id: '',
         fee_fund_head_id: '',
         school_class_id: '',
+        section: '',
         level_id: '',
     });
 
@@ -126,6 +127,7 @@ export default function ChallanUpdate() {
             fee_fund_category_id: challan.fee_fund_category_id ? String(challan.fee_fund_category_id) : '',
             fee_fund_head_id: challan.fee_fund_head_id ? String(challan.fee_fund_head_id) : '',
             school_class_id: challan.school_class_id ? String(challan.school_class_id) : '',
+            section: challan.section || '',
             level_id: challan.level_id ? String(challan.level_id) : '',
         });
         open();
@@ -428,9 +430,9 @@ export default function ChallanUpdate() {
                                 />
                             </SimpleGrid>
 
-                            <SimpleGrid cols={3}>
+                            <SimpleGrid cols={2}>
                                 <ThemedSelect
-                                    label="Class / Section"
+                                    label="Class"
                                     placeholder="Select class"
                                     data={metadata.classes}
                                     value={data.school_class_id}
@@ -439,6 +441,16 @@ export default function ChallanUpdate() {
                                     searchable
                                     clearable
                                 />
+                                <ThemedInput
+                                    label="Section"
+                                    placeholder="e.g. A, B, Blue"
+                                    value={data.section}
+                                    onChange={(e) => setData('section', e.target.value)}
+                                    error={errors.section}
+                                />
+                            </SimpleGrid>
+
+                            <SimpleGrid cols={2}>
                                 <ThemedSelect
                                     label="Fee Category"
                                     placeholder="Select category"

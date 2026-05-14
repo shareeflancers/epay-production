@@ -394,6 +394,7 @@ class SettingsController extends Controller
                                 'name'                    => $profile->name,
                                 'father_or_guardian_name' => $profile->father_or_guardian_name,
                                 'class'                   => $profile->class,
+                                'section'                 => $profile->section,
                                 'school_class_id'         => $profile->school_class_id,
                                 'level_id'                => $profile->level_id,
                                 'region_name'             => $profile->region_name ?? null,
@@ -446,6 +447,7 @@ class SettingsController extends Controller
                             'fee_fund_head_id'      => $firstStructure->fee_fund_head_id ?? null,
                             'fee_fund_structure_id' => $firstStructure->id ?? null,
                             'school_class_id'       => $schoolClassId,
+                            'section'               => $profile->section,
                             'level_id'              => $profile->level_id,
                             'year_session_id'       => $yearSession->id,
                             'challan_snapshot'      => json_encode($snapshot),
@@ -616,6 +618,7 @@ class SettingsController extends Controller
             'fee_fund_category_id'  => 'nullable|exists:fee_fund_category,id',
             'fee_fund_head_id'      => 'nullable|exists:fee_fund_heads,id',
             'school_class_id'       => 'nullable|exists:school_classes,id',
+            'section'               => 'nullable|string|max:100',
             'level_id'              => 'nullable|exists:levels,id',
         ]);
 
@@ -637,6 +640,7 @@ class SettingsController extends Controller
                 'fee_fund_category_id',
                 'fee_fund_head_id',
                 'school_class_id',
+                'section',
                 'level_id',
             ]));
 
