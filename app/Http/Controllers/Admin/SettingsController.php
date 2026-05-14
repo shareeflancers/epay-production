@@ -640,6 +640,11 @@ class SettingsController extends Controller
                 'level_id',
             ]));
 
+            // Regenerate snapshot after update
+            $challan->update([
+                'challan_snapshot' => json_encode($challan->generateSnapshot())
+            ]);
+
             DB::commit();
             return redirect()->back()->with('success', 'Challan updated successfully.');
         } catch (\Exception $e) {

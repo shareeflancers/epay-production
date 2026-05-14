@@ -178,6 +178,100 @@ class ActiveChallan extends Model
     }
 
     /**
+     * Generate a snapshot of the challan data.
+     * 
+     * @return array
+     */
+    public function generateSnapshot(): array
+    {
+        $consumer = $this->consumer;
+        $profile = $consumer->profileDetails()->where('is_active', true)->first() ?: $consumer->profileDetails()->first();
+
+        // Get category IDs from profile or the challan itself
+        $categoryIds = $profile?->fee_fund_category_ids ?? [];
+        if (empty($categoryIds) && $this->fee_fund_category_id) {
+            $categoryIds = [$this->fee_fund_category_id];
+        }
+
+        $feeStructures = FeeFundStructure::where('is_active', true)
+            ->where('region_id', $this->region_id)
+            ->where('school_class_id', $this->school_class_id)
+            ->whereIn('fee_fund_category_id', $categoryIds)
+            ->get();
+
+        // Arrears details
+        $latestUnpaidHistory = self::where('consumer_id', $this->consumer_id)
+            ->where('status', 'U')
+            ->where('id', '!=', $this->id)
+            ->latest()
+            ->first();
+
+        $arrearsDetails = [];
+        if ($latestUnpaidHistory) {
+            $arrearsDetails = [
+                'challan_no' => $latestUnpaidHistory->challan_no,
+                'due_date'   => $latestUnpaidHistory->due_date?->toDateString(),
+                'amount'     => $latestUnpaidHistory->amount_within_dueDate,
+            ];
+        }
+
+        return [
+            'arrears_calculation' => [
+                'amount_arrears' => $this->amount_arrears,
+                'details'        => $arrearsDetails,
+            ],
+            'consumer' => [
+                'id'              => $consumer->id,
+                'consumer_number' => $consumer->consumer_number,
+                'consumer_type'   => $consumer->consumer_type,
+                'identification_number' => $consumer->identification_number,
+                'region_id'       => $consumer->region_id,
+                'institution_id'  => $consumer->institution_id,
+            ],
+            'profile' => $profile ? [
+                'id'                      => $profile->id,
+                'name'                    => $profile->name,
+                'father_or_guardian_name' => $profile->father_or_guardian_name,
+                'class'                   => $profile->class,
+                'school_class_id'         => $profile->school_class_id,
+                'level_id'                => $profile->level_id,
+                'region_name'             => $profile->region_name ?? null,
+                'fee_fund_category_ids'   => $profile->fee_fund_category_ids,
+            ] : null,
+            'institution' => $this->institution ? [
+                'id'     => $this->institution->id,
+                'name'   => $this->institution->name,
+                'region_id' => $this->institution->region_id,
+                'level_id'  => $this->institution->level_id,
+            ] : null,
+            'region' => $this->region ? [
+                'id'   => $this->region->id,
+                'name' => $this->region->name ?? $this->region->region ?? null,
+            ] : null,
+            'year_session' => $this->yearSession ? [
+                'id'         => $this->yearSession->id,
+                'name'       => $this->yearSession->name,
+                'start_date' => $this->yearSession->due_date?->toDateString(), // Using due_date as fallback if session dates missing
+                'end_date'   => $this->yearSession->end_date?->toDateString(),
+            ] : null,
+            'fee_structures' => $feeStructures->map(fn ($s) => [
+                'id'                  => $s->id,
+                'fee_fund_category_id'=> $s->fee_fund_category_id,
+                'fee_fund_category'   => $s->feeFundCategory?->category_title,
+                'fee_fund_head_id'    => $s->fee_fund_head_id,
+                'fee_fund_head'       => $s->feeFundHead?->head_identifier ?? null,
+                'fee_head_amounts'    => $s->fee_head_amounts ?? [],
+                'total'               => $s->total,
+                'region_id'           => $s->region_id,
+                'school_class_id'     => $s->school_class_id,
+            ])->values()->toArray(),
+            'fee_categories' => FeeFundCategory::whereIn('id', $categoryIds)
+                ->get(['id', 'category_title'])
+                ->toArray(),
+        ];
+    }
+
+    /**
      * Scope to get unpaid challans for a consumer.
      */
     public function scopeUnpaid($query)
