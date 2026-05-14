@@ -209,70 +209,83 @@ class ApiController extends Controller
 
             switch ($type) {
                 case 'institution':
-                    $query = DB::table('active_challans')
+                    $results = DB::table('active_challans')
                         ->join('institutions', 'active_challans.institution_id', '=', 'institutions.id')
+                        ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
+                            'institutions.id as group_id',
                             'institutions.name as group_name',
+                            'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
                         ]);
 
                     if ($institutionId) {
-                        $query->where('active_challans.institution_id', $institutionId);
+                        $results->where('active_challans.institution_id', $institutionId);
                     }
 
-                    $data = $query->groupBy('institutions.name')->get();
+                    $data = $this->formatAnalyticsData($results->groupBy('institutions.id', 'institutions.name', 'fee_fund_category.category_title')->get());
                     break;
 
                 case 'region':
-                    $query = DB::table('active_challans')
+                    $results = DB::table('active_challans')
                         ->join('regions', 'active_challans.region_id', '=', 'regions.id')
+                        ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
+                            'regions.id as group_id',
                             'regions.name as group_name',
+                            'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
                         ]);
 
                     if ($regionId) {
-                        $query->where('active_challans.region_id', $regionId);
+                        $results->where('active_challans.region_id', $regionId);
                     }
 
-                    $data = $query->groupBy('regions.name')->get();
+                    $data = $this->formatAnalyticsData($results->groupBy('regions.id', 'regions.name', 'fee_fund_category.category_title')->get());
                     break;
 
                 case 'class_section':
-                    $query = DB::table('active_challans')
+                    $results = DB::table('active_challans')
                         ->join('school_classes', 'active_challans.school_class_id', '=', 'school_classes.id')
                         ->join('consumers', 'active_challans.consumer_id', '=', 'consumers.id')
                         ->join('profile_details', 'consumers.id', '=', 'profile_details.consumer_id')
+                        ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
+                            DB::raw('CONCAT(active_challans.institution_id, "-", active_challans.school_class_id, "-", profile_details.section) as group_id'),
                             DB::raw('CONCAT(school_classes.name, " - ", profile_details.section) as group_name'),
+                            'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
                         ]);
 
                     if ($institutionId) {
-                        $query->where('active_challans.institution_id', $institutionId);
+                        $results->where('active_challans.institution_id', $institutionId);
                     }
                     if ($classId) {
-                        $query->where('active_challans.school_class_id', $classId);
+                        $results->where('active_challans.school_class_id', $classId);
                     }
                     if ($section) {
-                        $query->where('profile_details.section', $section);
+                        $results->where('profile_details.section', $section);
                     }
 
-                    $data = $query->groupBy('school_classes.name', 'profile_details.section')->get();
+                    $data = $this->formatAnalyticsData($results->groupBy('group_id', 'group_name', 'fee_fund_category.category_title')->get());
                     break;
 
                 default: // overall
-                    $stat = DB::table('active_challans')
+                    $results = DB::table('active_challans')
+                        ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
+                            DB::raw('"Overall" as group_id'),
                             DB::raw('"Overall" as group_name'),
-                            DB::raw('count(case when status = "P" then 1 end) as paid_count'),
-                            DB::raw('count(case when status = "U" then 1 end) as unpaid_count'),
+                            'fee_fund_category.category_title',
+                            DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
+                            DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
                         ])
-                        ->first();
-                    $data = [$stat];
+                        ->groupBy('fee_fund_category.category_title')
+                        ->get();
+                    $data = $this->formatAnalyticsData($results);
                     break;
             }
 
@@ -285,5 +298,39 @@ class ApiController extends Controller
             Log::error('API Error in fetchAnalytics: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Format flat results into a nested structure with category breakdown.
+     */
+    private function formatAnalyticsData($results)
+    {
+        $formatted = [];
+
+        foreach ($results as $row) {
+            $groupId = $row->group_id;
+
+            if (!isset($formatted[$groupId])) {
+                $formatted[$groupId] = [
+                    'group_name' => $row->group_name,
+                    'total_paid' => 0,
+                    'total_unpaid' => 0,
+                    'categories' => []
+                ];
+            }
+
+            $formatted[$groupId]['total_paid'] += $row->paid_count;
+            $formatted[$groupId]['total_unpaid'] += $row->unpaid_count;
+
+            if ($row->category_title) {
+                $formatted[$groupId]['categories'][] = [
+                    'name' => $row->category_title,
+                    'paid' => $row->paid_count,
+                    'unpaid' => $row->unpaid_count
+                ];
+            }
+        }
+
+        return array_values($formatted);
     }
 }
