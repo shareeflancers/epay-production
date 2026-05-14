@@ -165,4 +165,7 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/one-link-testing', function () {
         return Inertia::render('Admin/OneLinkTesting');
     })->name('admin.one-link-testing');
+
+    // Analytical Reports
+    Route::get('/reports/analytical', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('admin.reports.analytical');
 });

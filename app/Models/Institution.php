@@ -32,4 +32,12 @@ class Institution extends Model
     {
         return $this->hasMany(YearSession::class, 'institution_id');
     }
+
+    /**
+     * Get the active challans for this institution.
+     */
+    public function activeChallans(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ActiveChallan::class, 'institution_id');
+    }
 }

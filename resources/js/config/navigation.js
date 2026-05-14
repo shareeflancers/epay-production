@@ -15,6 +15,11 @@ export const adminNavItems = [
         href: '/admin/dashboard'
     },
     {
+        label: 'Reports',
+        icon: 'chart',
+        href: '/admin/reports/analytical'
+    },
+    {
         label: 'Monthly Procedure',
         icon: 'calendar',
         href: '/admin/monthly-procedure'
