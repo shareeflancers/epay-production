@@ -3,7 +3,6 @@ import {
     Title,
     Text,
     Card,
-    Table,
     Group,
     Stack,
     Box,
@@ -11,13 +10,15 @@ import {
     Badge,
     Select,
     Button,
+    Anchor,
 } from '@mantine/core';
 import { router } from '@inertiajs/react';
 import { AdminLayout } from '../../../Components/Layout';
+import { DataTable } from '../../../Components/DataTable';
 import { useTheme } from '../../../theme';
 import { adminNavItems } from '../../../config/navigation';
 
-export default function AnalyticalReport({ institutions, filterOptions, filters }) {
+export default function AnalyticalReport({ institutions, filterOptions, filters, summaryTotals }) {
     const { ui, colorConfig } = useTheme();
     const [search, setSearch] = useState('');
 
@@ -44,52 +45,83 @@ export default function AnalyticalReport({ institutions, filterOptions, filters 
         router.get('/admin/reports/analytical');
     };
 
-    const filteredInstitutions = institutions.filter(inst =>
-        inst.name.toLowerCase().includes(search.toLowerCase())
-    );
+    const handlePageChange = (page) => {
+        router.get('/admin/reports/analytical', {
+            ...filters,
+            page: page
+        }, {
+            preserveState: true,
+            replace: true
+        });
+    };
 
-    const rows = filteredInstitutions.map((inst) => (
-        <Table.Tr key={inst.id}>
-            <Table.Td>
-                <Text fw={500} size="sm">{inst.name}</Text>
-            </Table.Td>
-            <Table.Td align="center" style={{ textAlign: 'center' }}>
+    const columns = [
+        {
+            key: 'name',
+            label: 'Institution / School',
+            render: (val, row) => (
+                <Anchor 
+                    fw={500} 
+                    size="sm"
+                    underline="hover"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        router.get(`/admin/reports/analytical/institution/${row.id}`);
+                    }}
+                    href={`/admin/reports/analytical/institution/${row.id}`}
+                >
+                    {val}
+                </Anchor>
+            )
+        },
+        {
+            key: 'total_count',
+            label: 'Total Challans',
+            render: (val) => (
                 <Badge variant="light" color="blue" size="lg">
-                    {inst.total_count}
+                    {val}
                 </Badge>
-            </Table.Td>
-            <Table.Td align="center" style={{ textAlign: 'center' }}>
+            )
+        },
+        {
+            key: 'paid_count',
+            label: 'Paid',
+            render: (val) => (
                 <Badge variant="light" color="green" size="lg">
-                    {inst.paid_count}
+                    {val}
                 </Badge>
-            </Table.Td>
-            <Table.Td align="center" style={{ textAlign: 'center' }}>
+            )
+        },
+        {
+            key: 'unpaid_count',
+            label: 'Unpaid',
+            render: (val) => (
                 <Badge variant="light" color="orange" size="lg">
-                    {inst.unpaid_count}
+                    {val}
                 </Badge>
-            </Table.Td>
-            <Table.Td align="center" style={{ textAlign: 'center' }}>
+            )
+        },
+        {
+            key: 'synced_count',
+            label: 'Synced to SMS',
+            render: (val) => (
                 <Badge variant="light" color="teal" size="lg">
-                    {inst.synced_count}
+                    {val}
                 </Badge>
-            </Table.Td>
-            <Table.Td align="center" style={{ textAlign: 'center' }}>
+            )
+        },
+        {
+            key: 'collection_rate',
+            label: 'Collection Rate',
+            render: (val, row) => (
                 <Text size="sm" fw={700}>
-                    {inst.total_count > 0
-                        ? `${Math.round((inst.paid_count / inst.total_count) * 100)}%`
+                    {row.total_count > 0
+                        ? `${Math.round((row.paid_count / row.total_count) * 100)}%`
                         : '0%'}
                 </Text>
-            </Table.Td>
-        </Table.Tr>
-    ));
-
-    // Totals calculation
-    const totals = institutions.reduce((acc, inst) => ({
-        total: acc.total + inst.total_count,
-        paid: acc.paid + inst.paid_count,
-        unpaid: acc.unpaid + inst.unpaid_count,
-        synced: acc.synced + inst.synced_count,
-    }), { total: 0, paid: 0, unpaid: 0, synced: 0 });
+            )
+        }
+    ];
 
     return (
         <AdminLayout navItems={adminNavItems}>
@@ -141,66 +173,28 @@ export default function AnalyticalReport({ institutions, filterOptions, filters 
                 {/* Statistics Cards */}
                 <Group grow>
                     <Card shadow="xs" padding="md" radius="md" withBorder>
-                        <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Selected Total</Text>
-                        <Text fw={700} size="xl">{totals.total.toLocaleString()}</Text>
+                        <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Total (All Filtered)</Text>
+                        <Text fw={700} size="xl">{summaryTotals.total.toLocaleString()}</Text>
                     </Card>
                     <Card shadow="xs" padding="md" radius="md" withBorder>
-                        <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Selected Paid</Text>
-                        <Text fw={700} size="xl" c="green">{totals.paid.toLocaleString()}</Text>
+                        <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Paid (All Filtered)</Text>
+                        <Text fw={700} size="xl" c="green">{summaryTotals.paid.toLocaleString()}</Text>
                     </Card>
                     <Card shadow="xs" padding="md" radius="md" withBorder>
-                        <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Selected Synced</Text>
-                        <Text fw={700} size="xl" c="teal">{totals.synced.toLocaleString()}</Text>
+                        <Text size="xs" c="dimmed" tt="uppercase" fw={700}>Synced (All Filtered)</Text>
+                        <Text fw={700} size="xl" c="teal">{summaryTotals.synced.toLocaleString()}</Text>
                     </Card>
                 </Group>
 
-                {/* Report Table */}
-                <Card shadow="sm" radius="md" padding="lg" style={{ background: ui.cardBg, border: `1px solid ${ui.border}` }}>
-                    <Stack gap="md">
-                        <Group justify="space-between">
-                            <Text fw={700}>Report Results</Text>
-                            <TextInput
-                                placeholder="Filter results by name..."
-                                value={search}
-                                onChange={(event) => setSearch(event.currentTarget.value)}
-                                size="xs"
-                                style={{ width: 250 }}
-                            />
-                        </Group>
-
-                        <Table verticalSpacing="sm" highlightOnHover striped withTableBorder>
-                            <Table.Thead>
-                                <Table.Tr>
-                                    <Table.Th>Institution / School</Table.Th>
-                                    <Table.Th align="center" style={{ textAlign: 'center' }}>Total Challans</Table.Th>
-                                    <Table.Th align="center" style={{ textAlign: 'center' }}>Paid</Table.Th>
-                                    <Table.Th align="center" style={{ textAlign: 'center' }}>Unpaid</Table.Th>
-                                    <Table.Th align="center" style={{ textAlign: 'center' }}>Synced to SMS</Table.Th>
-                                    <Table.Th align="center" style={{ textAlign: 'center' }}>Collection Rate</Table.Th>
-                                </Table.Tr>
-                            </Table.Thead>
-                            <Table.Tbody>{rows}</Table.Tbody>
-                            {filteredInstitutions.length > 0 && (
-                                <Table.Tfoot>
-                                    <Table.Tr>
-                                        <Table.Th>Total</Table.Th>
-                                        <Table.Th style={{ textAlign: 'center' }}>{totals.total.toLocaleString()}</Table.Th>
-                                        <Table.Th style={{ textAlign: 'center' }}>{totals.paid.toLocaleString()}</Table.Th>
-                                        <Table.Th style={{ textAlign: 'center' }}>{totals.unpaid.toLocaleString()}</Table.Th>
-                                        <Table.Th style={{ textAlign: 'center' }}>{totals.synced.toLocaleString()}</Table.Th>
-                                        <Table.Th style={{ textAlign: 'center' }}>
-                                            {totals.total > 0 ? `${Math.round((totals.paid / totals.total) * 100)}%` : '0%'}
-                                        </Table.Th>
-                                    </Table.Tr>
-                                </Table.Tfoot>
-                            )}
-                        </Table>
-
-                        {filteredInstitutions.length === 0 && (
-                            <Text align="center" c="dimmed" py="xl">No data found for the selected filters.</Text>
-                        )}
-                    </Stack>
-                </Card>
+                {/* Report Table using DataTable */}
+                <DataTable
+                    columns={columns}
+                    data={institutions.data}
+                    pagination={institutions}
+                    onPageChange={handlePageChange}
+                    showActions={false}
+                    emptyMessage="No data found for the selected filters."
+                />
             </Stack>
         </AdminLayout>
     );

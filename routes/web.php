@@ -168,4 +168,6 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
 
     // Analytical Reports
     Route::get('/reports/analytical', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('admin.reports.analytical');
+    Route::get('/reports/analytical/institution/{id}', [\App\Http\Controllers\Admin\ReportController::class, 'showInstitution'])->name('admin.reports.institution');
+    Route::get('/reports/analytical/students', [\App\Http\Controllers\Admin\ReportController::class, 'showStudents'])->name('admin.reports.students');
 });
