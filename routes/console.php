@@ -15,7 +15,9 @@ Artisan::command('inspire', function () {
     } catch (\Exception $e) {
         \Illuminate\Support\Facades\Log::error('Cron: Queue worker failed: ' . $e->getMessage());
     }
-})->everyMinute()->withoutOverlapping();
+})->everyMinute()
+    ->name('queue-worker')
+    ->withoutOverlapping();
 
 // Heartbeat log to confirm the scheduler itself is being triggered by cPanel Cron
 \Illuminate\Support\Facades\Schedule::call(function () {
