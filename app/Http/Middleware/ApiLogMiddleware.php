@@ -16,11 +16,19 @@ class ApiLogMiddleware
         $duration = round((microtime(true) - $startTime) * 1000);
 
         try {
+            $content = $response->getContent();
+            $responsePayload = json_decode($content, true);
+
+            // If response is not JSON, store the raw content truncated if needed
+            if (is_null($responsePayload) && !empty($content)) {
+                $responsePayload = ['raw_response' => mb_substr($content, 0, 5000)];
+            }
+
             ApiLog::create([
-                'endpoint' => $request->fullUrl(),
+                'endpoint' => mb_substr($request->fullUrl(), 0, 2000), // Safety truncation
                 'method' => $request->method(),
                 'request_payload' => $request->except(['password', 'password_confirmation']),
-                'response_payload' => json_decode($response->getContent(), true),
+                'response_payload' => $responsePayload,
                 'status_code' => $response->getStatusCode(),
                 'ip_address' => $request->ip(),
                 'country' => null,

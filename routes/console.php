@@ -9,4 +9,15 @@ Artisan::command('inspire', function () {
 
 \Illuminate\Support\Facades\Schedule::command('queue:work --stop-when-empty')
     ->everyMinute()
-    ->withoutOverlapping();
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Illuminate\Support\Facades\Log::info('Cron: Queue worker processed successfully.');
+    })
+    ->onFailure(function () {
+        \Illuminate\Support\Facades\Log::error('Cron: Queue worker failed to start or run.');
+    });
+
+// Heartbeat log to confirm the scheduler itself is being triggered by cPanel Cron
+\Illuminate\Support\Facades\Schedule::call(function () {
+    \Illuminate\Support\Facades\Log::debug('Scheduler Heartbeat: Cron job is active.');
+})->everyMinute();
