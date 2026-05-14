@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Models\FeeFundCategory;
 use App\Models\Consumer;
 use App\Models\ActiveChallan;
@@ -186,6 +187,103 @@ class ApiController extends Controller
         } catch (Throwable $e) {
             Log::error('API Error in fetchChallanStatus: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Server error'], 500);
+        }
+    }
+
+    public function fetchAnalytics(Request $request)
+    {
+        try {
+            // Authentication
+            if (!$this->verifyAuth($request)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid authentication credentials'
+                ], 401);
+            }
+
+            $type = $request->input('type', 'overall');
+            $institutionId = $request->input('institution_id');
+            $regionId = $request->input('region_id');
+            $classId = $request->input('school_class_id');
+            $section = $request->input('section');
+
+            switch ($type) {
+                case 'institution':
+                    $query = DB::table('active_challans')
+                        ->join('institutions', 'active_challans.institution_id', '=', 'institutions.id')
+                        ->select([
+                            'institutions.name as group_name',
+                            DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
+                            DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
+                        ]);
+
+                    if ($institutionId) {
+                        $query->where('active_challans.institution_id', $institutionId);
+                    }
+
+                    $data = $query->groupBy('institutions.name')->get();
+                    break;
+
+                case 'region':
+                    $query = DB::table('active_challans')
+                        ->join('regions', 'active_challans.region_id', '=', 'regions.id')
+                        ->select([
+                            'regions.name as group_name',
+                            DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
+                            DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
+                        ]);
+
+                    if ($regionId) {
+                        $query->where('active_challans.region_id', $regionId);
+                    }
+
+                    $data = $query->groupBy('regions.name')->get();
+                    break;
+
+                case 'class_section':
+                    $query = DB::table('active_challans')
+                        ->join('school_classes', 'active_challans.school_class_id', '=', 'school_classes.id')
+                        ->join('consumers', 'active_challans.consumer_id', '=', 'consumers.id')
+                        ->join('profile_details', 'consumers.id', '=', 'profile_details.consumer_id')
+                        ->select([
+                            DB::raw('CONCAT(school_classes.name, " - ", profile_details.section) as group_name'),
+                            DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
+                            DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
+                        ]);
+
+                    if ($institutionId) {
+                        $query->where('active_challans.institution_id', $institutionId);
+                    }
+                    if ($classId) {
+                        $query->where('active_challans.school_class_id', $classId);
+                    }
+                    if ($section) {
+                        $query->where('profile_details.section', $section);
+                    }
+
+                    $data = $query->groupBy('school_classes.name', 'profile_details.section')->get();
+                    break;
+
+                default: // overall
+                    $stat = DB::table('active_challans')
+                        ->select([
+                            DB::raw('"Overall" as group_name'),
+                            DB::raw('count(case when status = "P" then 1 end) as paid_count'),
+                            DB::raw('count(case when status = "U" then 1 end) as unpaid_count'),
+                        ])
+                        ->first();
+                    $data = [$stat];
+                    break;
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+
+        } catch (Throwable $e) {
+            Log::error('API Error in fetchAnalytics: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
         }
     }
 }

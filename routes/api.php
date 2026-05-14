@@ -16,3 +16,4 @@ Route::get('/challan/single', [ApiController::class, 'fetchSingleChallan']);
 Route::post('/challan/bulk', [ApiController::class, 'fetchBulkChallans']);
 
 Route::get('/challans/status', [ApiController::class, 'fetchChallanStatus']);
+Route::get('/challans/analytics', [ApiController::class, 'fetchAnalytics']);

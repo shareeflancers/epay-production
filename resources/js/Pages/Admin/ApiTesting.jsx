@@ -16,7 +16,8 @@ import {
     Badge,
     Tabs,
     Box,
-    JsonInput
+    JsonInput,
+    Select
 } from '@mantine/core';
 import { AdminLayout } from '@/Components/Layout';
 import { useTheme } from '@/theme';
@@ -39,6 +40,13 @@ export default function ApiTesting() {
     const [singleId, setSingleId] = useState('');
     const [bulkIds, setBulkIds] = useState('');
     const [statusIds, setStatusIds] = useState('');
+    const [analyticsType, setAnalyticsType] = useState('overall');
+    const [analyticsFilters, setAnalyticsFilters] = useState({
+        institution_id: '',
+        region_id: '',
+        school_class_id: '',
+        section: ''
+    });
 
     const callApi = async (method, endpoint, params = null, body = null) => {
         setLoading(true);
@@ -119,6 +127,7 @@ export default function ApiTesting() {
                             <Tabs.Tab value="single">2. Single Challan URL</Tabs.Tab>
                             <Tabs.Tab value="bulk">3. Bulk Print URL</Tabs.Tab>
                             <Tabs.Tab value="status">4. Challan Status</Tabs.Tab>
+                            <Tabs.Tab value="analytics">5. Analytics</Tabs.Tab>
                         </Tabs.List>
 
                         <Tabs.Panel value="categories" pt="xl">
@@ -206,6 +215,78 @@ export default function ApiTesting() {
                                         loading={loading}
                                         color={primaryColor}
                                         disabled={!statusIds}
+                                    >
+                                        Execute API Call
+                                    </Button>
+                                </Stack>
+                            </Paper>
+                        </Tabs.Panel>
+
+                        <Tabs.Panel value="analytics" pt="xl">
+                            <Paper p="xl" withBorder>
+                                <Stack align="flex-start">
+                                    <Title order={4}>Get Analytical Reports</Title>
+                                    <Text size="sm">Fetch paid/unpaid counts grouped by various dimensions. Filters are optional.</Text>
+                                    <Code>GET /api/challans/analytics?type=...</Code>
+
+                                    <Group grow align="flex-end" w="100%">
+                                        <Select
+                                            label="Grouping Type"
+                                            placeholder="Select Type"
+                                            value={analyticsType}
+                                            onChange={setAnalyticsType}
+                                            data={[
+                                                { value: 'overall', label: 'Overall Summary' },
+                                                { value: 'institution', label: 'By Institution' },
+                                                { value: 'region', label: 'By Region' },
+                                                { value: 'class_section', label: 'By Class & Section' },
+                                            ]}
+                                        />
+
+                                        {analyticsType === 'region' && (
+                                            <TextInput
+                                                label="Region ID"
+                                                placeholder="e.g. 1"
+                                                value={analyticsFilters.region_id}
+                                                onChange={(e) => setAnalyticsFilters({...analyticsFilters, region_id: e.target.value})}
+                                            />
+                                        )}
+
+                                        {(analyticsType === 'institution' || analyticsType === 'class_section') && (
+                                            <TextInput
+                                                label="Institution ID"
+                                                placeholder="e.g. 5"
+                                                value={analyticsFilters.institution_id}
+                                                onChange={(e) => setAnalyticsFilters({...analyticsFilters, institution_id: e.target.value})}
+                                            />
+                                        )}
+
+                                        {analyticsType === 'class_section' && (
+                                            <>
+                                                <TextInput
+                                                    label="Class ID"
+                                                    placeholder="e.g. 10"
+                                                    value={analyticsFilters.school_class_id}
+                                                    onChange={(e) => setAnalyticsFilters({...analyticsFilters, school_class_id: e.target.value})}
+                                                />
+                                                <TextInput
+                                                    label="Section"
+                                                    placeholder="e.g. A"
+                                                    value={analyticsFilters.section}
+                                                    onChange={(e) => setAnalyticsFilters({...analyticsFilters, section: e.target.value})}
+                                                />
+                                            </>
+                                        )}
+                                    </Group>
+
+                                    <Button
+                                        onClick={() => callApi('get', '/challans/analytics', {
+                                            type: analyticsType,
+                                            ...analyticsFilters
+                                        })}
+                                        loading={loading}
+                                        color={primaryColor}
+                                        mt="md"
                                     >
                                         Execute API Call
                                     </Button>
