@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\LevelController;
 use App\Http\Controllers\Admin\ClassController;
 use App\Http\Controllers\Admin\FeeFundHeadController;
 use App\Http\Controllers\Admin\YearSessionsController;
+use App\Http\Controllers\Admin\DatabaseBackupController;
 use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -124,6 +125,13 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::post('/settings/retry-sms-sync', [SettingsController::class, 'retrySmsSync'])->name('admin.settings.retry-sms-sync');
     Route::post('/utilities/generateChallans', [SettingsController::class, 'generateBulkChallans'])->name('admin.utilities.generateChallans');
     Route::post('/utilities/archiveChallans', [SettingsController::class, 'moveToHistory'])->name('admin.utilities.archiveChallans');
+
+    // Database Backups & Import
+    Route::get('/settings/database-backups', [DatabaseBackupController::class, 'index'])->name('admin.database-backups');
+    Route::post('/settings/database-backups', [DatabaseBackupController::class, 'backup'])->name('admin.database-backups.create');
+    Route::get('/settings/database-backups/{filename}/download', [DatabaseBackupController::class, 'download'])->name('admin.database-backups.download');
+    Route::post('/settings/database-backups/import', [DatabaseBackupController::class, 'import'])->name('admin.database-backups.import');
+    Route::delete('/settings/database-backups/{filename}', [DatabaseBackupController::class, 'destroy'])->name('admin.database-backups.destroy');
 
     // API & External Systems Testing
     Route::get('/api-testing', function () {

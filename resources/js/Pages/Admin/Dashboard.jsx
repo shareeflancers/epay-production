@@ -135,7 +135,7 @@ export default function Dashboard({ stats }) {
                             <Text size="sm">
                                 Highest activity detected on: <b>{stats.charts.collection_trend[stats.charts.collection_trend.length - 1]?.date || 'N/A'}</b>.
                             </Text>
-                            <Text size="sm">
+                            <Text size="sm" component="div">
                                 System status: <Badge color="green" variant="light">Operational</Badge>
                             </Text>
                         </Stack>
