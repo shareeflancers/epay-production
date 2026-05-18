@@ -24,5 +24,7 @@ Artisan::command('inspire', function () {
     \Illuminate\Support\Facades\Log::debug('Scheduler Heartbeat: Cron job is active.');
 })->everyMinute();
 
-// Database Backup every 5 minutes
-\Illuminate\Support\Facades\Schedule::command('db:backup')->everyFiveMinutes();
+// Database Backup every 5 minutes (using call instead of command to avoid proc_open)
+\Illuminate\Support\Facades\Schedule::call(function () {
+    \Illuminate\Support\Facades\Artisan::call('db:backup');
+})->everyFiveMinutes();
