@@ -130,7 +130,6 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/settings/database-backups', [DatabaseBackupController::class, 'index'])->name('admin.database-backups');
     Route::post('/settings/database-backups', [DatabaseBackupController::class, 'backup'])->name('admin.database-backups.create');
     Route::get('/settings/database-backups/{filename}/download', [DatabaseBackupController::class, 'download'])->name('admin.database-backups.download');
-    Route::post('/settings/database-backups/import', [DatabaseBackupController::class, 'import'])->name('admin.database-backups.import');
     Route::delete('/settings/database-backups/{filename}', [DatabaseBackupController::class, 'destroy'])->name('admin.database-backups.destroy');
 
     // API & External Systems Testing

@@ -49,22 +49,17 @@ class DatabaseBackup extends Command
         $dbPass = config('database.connections.mysql.password');
         $dbName = config('database.connections.mysql.database');
 
-        // Set up mysqldump command
-        // We use env array in Process to safely pass the password, avoiding command-line warnings
-        $mysqldumpPath = env('DB_MYSQLDUMP_PATH', 'mysqldump');
-        $command = [$mysqldumpPath, '-u', $dbUser, '-h', $dbHost, '-P', $dbPort, $dbName, '--result-file=' . $filepath];
-
-        $process = new Process($command);
-        $process->setTimeout(300); // 5 minutes max
-
-        $env = array_merge(getenv(), $_SERVER, $_ENV);
-        if (!empty($dbPass)) {
-            $env['MYSQL_PWD'] = $dbPass;
-        }
-        $process->setEnv($env);
-
+        // Set up pure PHP mysqldump (no proc_open required)
         try {
-            $process->mustRun();
+            $dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName}";
+            $dumpSettings = [
+                'compress' => \Ifsnop\Mysqldump\Mysqldump::NONE,
+                'add-drop-table' => true,
+            ];
+
+            $dumper = new \Ifsnop\Mysqldump\Mysqldump($dsn, $dbUser, $dbPass, $dumpSettings);
+            $dumper->start($filepath);
+
             $this->info('Backup successfully created at ' . $filepath);
             Log::info('DatabaseBackup: Successfully created backup at ' . $filepath);
 
@@ -72,7 +67,7 @@ class DatabaseBackup extends Command
             $this->cleanupOldBackups($path);
 
             return Command::SUCCESS;
-        } catch (ProcessFailedException $exception) {
+        } catch (\Exception $exception) {
             $this->error('The backup process failed: ' . $exception->getMessage());
             Log::error('DatabaseBackup: Failed. Error: ' . $exception->getMessage());
             return Command::FAILURE;
