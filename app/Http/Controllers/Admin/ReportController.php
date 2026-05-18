@@ -6,6 +6,7 @@
  use App\Models\Institution;
  use App\Models\SchoolClass;
  use App\Models\ActiveChallan;
+ use App\Models\FeeFundCategory;
  use Illuminate\Support\Facades\DB;
  use Inertia\Inertia;
 
@@ -16,6 +17,7 @@
          $institutionId = $request->input('institution_id');
          $classId = $request->input('school_class_id');
          $section = $request->input('section');
+         $feeFundCategoryId = $request->input('fee_fund_category_id');
 
          $query = Institution::where('is_active', true)
              ->where('is_deleted', false);
@@ -27,26 +29,29 @@
          // Calculate totals for all matched institutions (before pagination)
          $totalsQuery = clone $query;
          $totals = $totalsQuery->withCount([
-             'activeChallans as total' => function ($q) use ($classId, $section) {
+             'activeChallans as total' => function ($q) use ($classId, $section, $feeFundCategoryId) {
                  if ($classId) $q->where('school_class_id', $classId);
+                 if ($feeFundCategoryId) $q->where('fee_fund_category_id', $feeFundCategoryId);
                  if ($section) {
                      $q->whereHas('consumer.profileDetails', function ($pq) use ($section) {
                          $pq->where('section', $section);
                      });
                  }
              },
-             'activeChallans as paid' => function ($q) use ($classId, $section) {
+             'activeChallans as paid' => function ($q) use ($classId, $section, $feeFundCategoryId) {
                  $q->where('status', 'P');
                  if ($classId) $q->where('school_class_id', $classId);
+                 if ($feeFundCategoryId) $q->where('fee_fund_category_id', $feeFundCategoryId);
                  if ($section) {
                      $q->whereHas('consumer.profileDetails', function ($pq) use ($section) {
                          $pq->where('section', $section);
                      });
                  }
              },
-             'activeChallans as synced' => function ($q) use ($classId, $section) {
+             'activeChallans as synced' => function ($q) use ($classId, $section, $feeFundCategoryId) {
                  $q->where('sms_sync', 1);
                  if ($classId) $q->where('school_class_id', $classId);
+                 if ($feeFundCategoryId) $q->where('fee_fund_category_id', $feeFundCategoryId);
                  if ($section) {
                      $q->whereHas('consumer.profileDetails', function ($pq) use ($section) {
                          $pq->where('section', $section);
@@ -62,35 +67,39 @@
          ];
 
          $institutions = $query->withCount([
-             'activeChallans as total_count' => function ($q) use ($classId, $section) {
+             'activeChallans as total_count' => function ($q) use ($classId, $section, $feeFundCategoryId) {
                  if ($classId) $q->where('school_class_id', $classId);
+                 if ($feeFundCategoryId) $q->where('fee_fund_category_id', $feeFundCategoryId);
                  if ($section) {
                      $q->whereHas('consumer.profileDetails', function ($pq) use ($section) {
                          $pq->where('section', $section);
                      });
                  }
              },
-             'activeChallans as paid_count' => function ($q) use ($classId, $section) {
+             'activeChallans as paid_count' => function ($q) use ($classId, $section, $feeFundCategoryId) {
                  $q->where('status', 'P');
                  if ($classId) $q->where('school_class_id', $classId);
+                 if ($feeFundCategoryId) $q->where('fee_fund_category_id', $feeFundCategoryId);
                  if ($section) {
                      $q->whereHas('consumer.profileDetails', function ($pq) use ($section) {
                          $pq->where('section', $section);
                      });
                  }
              },
-             'activeChallans as unpaid_count' => function ($q) use ($classId, $section) {
+             'activeChallans as unpaid_count' => function ($q) use ($classId, $section, $feeFundCategoryId) {
                  $q->where('status', 'U');
                  if ($classId) $q->where('school_class_id', $classId);
+                 if ($feeFundCategoryId) $q->where('fee_fund_category_id', $feeFundCategoryId);
                  if ($section) {
                      $q->whereHas('consumer.profileDetails', function ($pq) use ($section) {
                          $pq->where('section', $section);
                      });
                  }
              },
-             'activeChallans as synced_count' => function ($q) use ($classId, $section) {
+             'activeChallans as synced_count' => function ($q) use ($classId, $section, $feeFundCategoryId) {
                  $q->where('sms_sync', 1);
                  if ($classId) $q->where('school_class_id', $classId);
+                 if ($feeFundCategoryId) $q->where('fee_fund_category_id', $feeFundCategoryId);
                  if ($section) {
                      $q->whereHas('consumer.profileDetails', function ($pq) use ($section) {
                          $pq->where('section', $section);
@@ -109,22 +118,37 @@
              'filterOptions' => [
                  'institutions' => Institution::where('is_active', true)->select('id', 'name as label')->get(),
                  'classes' => SchoolClass::where('is_active', true)->select('id', 'name as label')->get(),
+                 'feeFundCategories' => FeeFundCategory::where('is_active', true)->select('id', 'category_title as label')->get(),
              ],
-             'filters' => $request->only(['institution_id', 'school_class_id', 'section'])
+             'filters' => $request->only(['institution_id', 'school_class_id', 'section', 'fee_fund_category_id'])
          ]);
      }
 
-     public function showInstitution($id)
+     public function showInstitution(\Illuminate\Http\Request $request, $id)
      {
          $institution = Institution::findOrFail($id);
+         $classId = $request->input('school_class_id');
+         $section = $request->input('section');
+         $feeFundCategoryId = $request->input('fee_fund_category_id');
 
-         $stats = \DB::table('active_challans as ac')
+         $query = \DB::table('active_challans as ac')
              ->join('consumers as c', 'ac.consumer_id', '=', 'c.id')
              ->join('profile_details as pd', 'c.id', '=', 'pd.consumer_id')
              ->leftJoin('school_classes as sc', 'ac.school_class_id', '=', 'sc.id')
              ->where('ac.institution_id', $id)
-             ->where('pd.is_active', true)
-             ->select([
+             ->where('pd.is_active', true);
+
+         if ($classId) {
+             $query->where('ac.school_class_id', $classId);
+         }
+         if ($section) {
+             $query->where('pd.section', $section);
+         }
+         if ($feeFundCategoryId) {
+             $query->where('ac.fee_fund_category_id', $feeFundCategoryId);
+         }
+
+         $stats = $query->select([
                  'ac.school_class_id',
                  'sc.name as class_name',
                  'pd.section',
@@ -140,7 +164,8 @@
 
          return Inertia::render('Admin/Reports/InstitutionShow', [
              'institution' => $institution,
-             'stats' => $stats
+             'stats' => $stats,
+             'filters' => $request->only(['school_class_id', 'section', 'fee_fund_category_id'])
          ]);
      }
 
@@ -149,12 +174,17 @@
          $institutionId = $request->input('institution_id');
          $classId = $request->input('school_class_id');
          $section = $request->input('section');
+         $feeFundCategoryId = $request->input('fee_fund_category_id');
 
          $query = ActiveChallan::with(['consumer.profileDetails', 'schoolClass'])
              ->where('institution_id', $institutionId);
 
          if ($classId) {
              $query->where('school_class_id', $classId);
+         }
+
+         if ($feeFundCategoryId) {
+             $query->where('fee_fund_category_id', $feeFundCategoryId);
          }
 
          if ($section) {

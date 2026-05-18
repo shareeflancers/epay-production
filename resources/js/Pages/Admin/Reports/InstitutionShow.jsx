@@ -22,7 +22,7 @@ const ReceiptIcon = () => (
     </svg>
 );
 
-export default function InstitutionShow({ institution, stats }) {
+export default function InstitutionShow({ institution, stats, filters = {} }) {
     const { ui } = useTheme();
 
     const breadcrumbs = [
@@ -90,7 +90,8 @@ export default function InstitutionShow({ institution, stats }) {
         router.get('/admin/reports/analytical/students', {
             institution_id: institution.id,
             school_class_id: stat.school_class_id,
-            section: stat.section
+            section: stat.section,
+            ...(filters.fee_fund_category_id ? { fee_fund_category_id: filters.fee_fund_category_id } : {})
         });
     };
 

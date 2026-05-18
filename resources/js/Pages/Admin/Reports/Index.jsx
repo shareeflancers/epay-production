@@ -26,12 +26,14 @@ export default function AnalyticalReport({ institutions, filterOptions, filters,
     const [institutionId, setInstitutionId] = useState(filters.institution_id || null);
     const [classId, setClassId] = useState(filters.school_class_id || null);
     const [section, setSection] = useState(filters.section || '');
+    const [feeFundCategoryId, setFeeFundCategoryId] = useState(filters.fee_fund_category_id || null);
 
     const handleFilter = () => {
         router.get('/admin/reports/analytical', {
             institution_id: institutionId,
             school_class_id: classId,
-            section: section
+            section: section,
+            fee_fund_category_id: feeFundCategoryId
         }, {
             preserveState: true,
             replace: true
@@ -42,6 +44,7 @@ export default function AnalyticalReport({ institutions, filterOptions, filters,
         setInstitutionId(null);
         setClassId(null);
         setSection('');
+        setFeeFundCategoryId(null);
         router.get('/admin/reports/analytical');
     };
 
@@ -60,15 +63,15 @@ export default function AnalyticalReport({ institutions, filterOptions, filters,
             key: 'name',
             label: 'Institution / School',
             render: (val, row) => (
-                <Anchor 
-                    fw={500} 
+                <Anchor
+                    fw={500}
                     size="sm"
                     underline="hover"
                     onClick={(e) => {
                         e.preventDefault();
-                        router.get(`/admin/reports/analytical/institution/${row.id}`);
+                        router.get(`/admin/reports/analytical/institution/${row.id}`, filters);
                     }}
-                    href={`/admin/reports/analytical/institution/${row.id}`}
+                    href={`/admin/reports/analytical/institution/${row.id}?${new URLSearchParams(Object.entries(filters).reduce((acc, [k, v]) => { if (v) acc[k] = v; return acc; }, {})).toString()}`}
                 >
                     {val}
                 </Anchor>
@@ -153,6 +156,16 @@ export default function AnalyticalReport({ institutions, filterOptions, filters,
                                 data={filterOptions.classes.map(c => ({ value: c.id.toString(), label: c.label }))}
                                 value={classId}
                                 onChange={setClassId}
+                                clearable
+                                searchable
+                                style={{ flex: 1 }}
+                            />
+                            <Select
+                                label="Fee Fund Category"
+                                placeholder="Select Category"
+                                data={filterOptions.feeFundCategories ? filterOptions.feeFundCategories.map(c => ({ value: c.id.toString(), label: c.label })) : []}
+                                value={feeFundCategoryId}
+                                onChange={setFeeFundCategoryId}
                                 clearable
                                 searchable
                                 style={{ flex: 1 }}
