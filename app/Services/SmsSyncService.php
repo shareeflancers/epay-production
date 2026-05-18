@@ -44,7 +44,7 @@ class SmsSyncService
 
                 $heads = [];
                 $amounts = $structure->fee_head_amounts;
-                $verifyUrl = route('challan.verify', ['consumer_number' => $challan->challan_no]);
+                $verifyUrl = rtrim(config('app.url'), '/') . route('challan.verify', ['consumer_number' => $challan->challan_no], false);
 
                 // Map the breakdown from the structure
                 if (is_array($amounts)) {
