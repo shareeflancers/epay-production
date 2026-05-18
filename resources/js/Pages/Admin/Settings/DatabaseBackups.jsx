@@ -22,10 +22,13 @@ import { IconDatabase, IconDownload, IconTrash, IconUpload, IconInfoCircle } fro
 import AdminLayout from '@/Components/Layout/AdminLayout';
 import { adminNavItems } from '@/config/navigation';
 import { useTheme } from '@/theme';
+import { ThemedModal } from '@/Components/UI';
 
 export default function DatabaseBackups({ backups }) {
     const { ui } = useTheme();
     const [isGenerating, setIsGenerating] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [fileToDelete, setFileToDelete] = useState(null);
 
     const handleGenerateBackup = () => {
         setIsGenerating(true);
@@ -35,10 +38,19 @@ export default function DatabaseBackups({ backups }) {
         });
     };
 
-    const handleDelete = (filename) => {
-        if (confirm(`Are you sure you want to delete ${filename}?`)) {
-            router.delete(`/admin/settings/database-backups/${filename}`, {
+    const confirmDelete = (filename) => {
+        setFileToDelete(filename);
+        setDeleteModalOpen(true);
+    };
+
+    const handleDelete = () => {
+        if (fileToDelete) {
+            router.delete(`/admin/settings/database-backups/${fileToDelete}`, {
                 preserveScroll: true,
+                onSuccess: () => {
+                    setDeleteModalOpen(false);
+                    setFileToDelete(null);
+                }
             });
         }
     };
@@ -103,7 +115,7 @@ export default function DatabaseBackups({ backups }) {
                                                 <ActionIcon
                                                     variant="light"
                                                     color="red"
-                                                    onClick={() => handleDelete(backup.name)}
+                                                    onClick={() => confirmDelete(backup.name)}
                                                     title="Delete Backup"
                                                 >
                                                     <IconTrash size={16} />
@@ -123,6 +135,24 @@ export default function DatabaseBackups({ backups }) {
                     </Table>
                 </Card>
 
+                <ThemedModal
+                    opened={deleteModalOpen}
+                    onClose={() => setDeleteModalOpen(false)}
+                    title="Confirm Deletion"
+                    centered
+                >
+                    <Text size="sm" mb="lg">
+                        Are you sure you want to delete the backup file <b>{fileToDelete}</b>? This action cannot be undone.
+                    </Text>
+                    <Group justify="flex-end">
+                        <Button variant="default" onClick={() => setDeleteModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button color="red" onClick={handleDelete}>
+                            Yes, Delete
+                        </Button>
+                    </Group>
+                </ThemedModal>
             </Box>
         </AdminLayout>
     );
