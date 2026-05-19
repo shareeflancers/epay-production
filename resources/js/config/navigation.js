@@ -70,6 +70,7 @@ export const adminNavItems = [
         href: '#consumers',
         children: [
             { label: '→ Students', href: '/admin/consumers/student' },
+            { label: '→ Institutions', href: '/admin/consumers/institution' },
         ]
     },
     {

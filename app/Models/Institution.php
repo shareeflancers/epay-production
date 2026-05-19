@@ -3,13 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Institution extends Model
 {
     protected $fillable = [
+        'id',
         'name',
         'region_id',
         'level_id',
+        'principal_name',
+        'principal_cnic',
         'display_order',
         'is_active',
         'is_deleted',
@@ -25,18 +29,12 @@ class Institution extends Model
         return $this->belongsTo(Level::class);
     }
 
-    /**
-     * Get the year sessions for this institution.
-     */
-    public function yearSessions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function yearSessions()
     {
         return $this->hasMany(YearSession::class, 'institution_id');
     }
 
-    /**
-     * Get the active challans for this institution.
-     */
-    public function activeChallans(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function activeChallans()
     {
         return $this->hasMany(ActiveChallan::class, 'institution_id');
     }

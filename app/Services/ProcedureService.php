@@ -47,6 +47,23 @@ class ProcedureService
     }
 
     /**
+     * Create a snapshot before Step 4 (Sync Institutions)
+     */
+    public static function snapshotSyncInstitutions()
+    {
+        $data = [
+            'before_count' => Consumer::where('consumer_type', 'institution')->count(),
+            'timestamp' => now()->toDateTimeString(),
+        ];
+
+        return ProcedureSnapshot::create([
+            'step_name' => 'sync_institutions',
+            'snapshot_data' => $data,
+            'batch_id' => 'batch_' . time(),
+        ]);
+    }
+
+    /**
      * Create a snapshot before Step 3 (Generate)
      */
     public static function snapshotGenerate()
@@ -79,6 +96,9 @@ class ProcedureService
                     break;
                 case 'sync':
                     self::rollbackSync($snapshot);
+                    break;
+                case 'sync_institutions':
+                    self::rollbackSyncInstitutions($snapshot);
                     break;
                 case 'generate':
                     self::rollbackGenerate($snapshot);
@@ -120,6 +140,20 @@ class ProcedureService
 
         // Note: Reverting UPDATED records is complex without a full row-by-row snapshot.
         // For now, we focus on removing the new batch.
+    }
+
+    private static function rollbackSyncInstitutions($snapshot)
+    {
+        $timestamp = $snapshot->snapshot_data['timestamp'];
+
+        // Delete institution consumers created AFTER the sync started
+        $newConsumers = Consumer::where('consumer_type', 'institution')
+                                ->where('created_at', '>=', $timestamp)
+                                ->get();
+        foreach ($newConsumers as $c) {
+            ProfileDetail::where('consumer_id', $c->id)->delete();
+            $c->delete();
+        }
     }
 
     private static function rollbackGenerate($snapshot)

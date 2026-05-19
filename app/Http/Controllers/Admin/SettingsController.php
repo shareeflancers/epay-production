@@ -178,8 +178,7 @@ class SettingsController extends Controller
     {
         DB::beginTransaction();
         try {
-            $activeChallans = ActiveChallan::all();
-            $count = $activeChallans->count();
+            $count = ActiveChallan::count();
 
             if ($count === 0) {
                 return response()->json([
@@ -192,16 +191,24 @@ class SettingsController extends Controller
             // Take snapshot before moving
             \App\Services\ProcedureService::snapshotArchive();
 
-            foreach ($activeChallans as $challan) {
-                // Replicate attributes to history model (excluding ID)
-                $history = new \App\Models\ChallanHistory();
-                $history->fill($challan->getAttributes());
-                unset($history->id);
-                $history->save();
+            // Process and move records in optimized chunks of 500
+            ActiveChallan::chunk(500, function ($challans) {
+                $historyData = [];
+                $idsToDelete = [];
 
-                // Delete the active record
-                $challan->delete();
-            }
+                foreach ($challans as $challan) {
+                    $attributes = $challan->getAttributes();
+                    unset($attributes['id']); // Exclude primary key
+                    $historyData[] = $attributes;
+                    $idsToDelete[] = $challan->id;
+                }
+
+                // Bulk insert into history
+                \App\Models\ChallanHistory::insert($historyData);
+
+                // Bulk delete from active_challans
+                ActiveChallan::whereIn('id', $idsToDelete)->delete();
+            });
 
             DB::commit();
             Log::info("Archived {$count} challans to history.");
@@ -246,6 +253,7 @@ class SettingsController extends Controller
         DB::beginTransaction();
         try {
             Consumer::where('is_active', true)
+                ->where('consumer_type', 'student')
                 ->with([
                     'profileDetails' => fn ($q) => $q->where('is_active', true),
                     'institution',

@@ -43,7 +43,8 @@ export default function MonthlyProcedure() {
     const [results, setResults] = useState({
         step1: null,
         step2: null,
-        step3: null
+        step3: null,
+        step4: null
     });
     const [snapshots, setSnapshots] = useState({});
     const [history, setHistory] = useState({ data: [], current_page: 1, last_page: 1 });
@@ -128,6 +129,15 @@ export default function MonthlyProcedure() {
         });
     };
 
+    const runStep4 = () => {
+        setProgressModal({
+            opened: true,
+            url: '/admin/api/fetch/institution',
+            label: 'Institution Sync',
+            method: 'GET'
+        });
+    };
+
     const onModalClose = () => {
         setProgressModal(prev => ({ ...prev, opened: false }));
         fetchSnapshots();
@@ -142,6 +152,9 @@ export default function MonthlyProcedure() {
             activeStep = 2;
             if (snapshots.generate && !snapshots.generate.is_rolled_back && new Date(snapshots.generate.created_at) > new Date(snapshots.sync.created_at)) {
                 activeStep = 3;
+                if (snapshots.sync_institutions && !snapshots.sync_institutions.is_rolled_back && new Date(snapshots.sync_institutions.created_at) > new Date(snapshots.generate.created_at)) {
+                    activeStep = 4;
+                }
             }
         }
     }
@@ -161,13 +174,14 @@ export default function MonthlyProcedure() {
                         <Stepper.Step label="Archive History" description="Moves unpaid challans to history" />
                         <Stepper.Step label="Sync Students" description="Updates profiles and fees" />
                         <Stepper.Step label="Generate Challans" description="Calculates new fees and arrears" />
+                        <Stepper.Step label="Sync Institutions" description="Fetches institution consumers" />
                         <Stepper.Completed>
                             <Text fw={500} ta="center" c="green">Monthly procedure complete! All challans generated.</Text>
                         </Stepper.Completed>
                     </Stepper>
                 </Paper>
 
-                <SimpleGrid cols={{ base: 1, md: 3 }} spacing="lg">
+                <SimpleGrid cols={{ base: 1, md: 2, lg: 4 }} spacing="lg">
                     {/* Step 1 Card */}
                     <Paper p="xl" radius="md" withBorder shadow="sm">
                         <Stack h="100%" justify="space-between">
@@ -303,6 +317,57 @@ export default function MonthlyProcedure() {
                                         leftSection={<IconHistory size={14} />}
                                     >
                                         Rollback Step 3
+                                    </Button>
+                                )}
+                            </Stack>
+                        </Stack>
+                    </Paper>
+
+                    {/* Step 4 Card */}
+                    <Paper p="xl" radius="md" withBorder shadow="sm">
+                        <Stack h="100%" justify="space-between">
+                            <Box>
+                                <Group justify="space-between" mb="md">
+                                    <ThemeIcon size={44} radius="md" color="violet" variant="light">
+                                        <IconUsers size={26} />
+                                    </ThemeIcon>
+                                    <Badge variant="outline">STEP 4</Badge>
+                                </Group>
+                                <Title order={4} mb="xs">Sync Institutions</Title>
+                                <Text size="sm" c="dimmed" mb="md">
+                                    Fetch institution consumers from HRMS API.
+                                </Text>
+                                <Alert icon={<IconAlertCircle size={16} />} color="violet" variant="light" mb="md">
+                                    Prepares institution profiles for future billing.
+                                </Alert>
+                                {results.step4 && (
+                                    <List size="xs" spacing="xs" mb="md" withPadding>
+                                        <List.Item>New: <Badge size="xs" color="green">{results.step4.stats.inserted}</Badge></List.Item>
+                                        <List.Item>Updated: <Badge size="xs" color="blue">{results.step4.stats.updated}</Badge></List.Item>
+                                    </List>
+                                )}
+                            </Box>
+                            <Stack gap="xs">
+                                <Button
+                                    fullWidth
+                                    leftSection={<IconUsers size={16} />}
+                                    onClick={runStep4}
+                                    loading={loading}
+                                    color="violet"
+                                >
+                                    Sync Data
+                                </Button>
+                                {snapshots.sync_institutions && !snapshots.sync_institutions.is_rolled_back && (
+                                    <Button
+                                        fullWidth
+                                        variant="subtle"
+                                        color="red"
+                                        size="xs"
+                                        onClick={() => runRollback(snapshots.sync_institutions.id)}
+                                        loading={loading}
+                                        leftSection={<IconHistory size={14} />}
+                                    >
+                                        Rollback Step 4
                                     </Button>
                                 )}
                             </Stack>

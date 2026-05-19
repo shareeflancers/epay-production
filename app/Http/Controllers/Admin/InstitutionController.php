@@ -78,11 +78,15 @@ class InstitutionController extends Controller
             'name' => 'required|string|max:255',
             'region_id' => 'required|exists:regions,id',
             'level_id' => 'required|exists:levels,id',
+            'principal_name' => 'required|string|max:255',
+            'principal_cnic' => 'required|integer|digits_between:1,13',
             'is_active' => 'boolean',
         ]);
 
         // Set default order
         $validated['display_order'] = Institution::max('display_order') + 1;
+
+        $validated['principal_name'] = ucwords(strtolower($validated['principal_name']));
 
         Institution::create($validated);
 
@@ -98,8 +102,12 @@ class InstitutionController extends Controller
             'name' => 'required|string|max:255',
             'region_id' => 'required|exists:regions,id',
             'level_id' => 'required|exists:levels,id',
+            'principal_name' => 'required|string|max:255',
+            'principal_cnic' => 'required|integer|digits_between:1,13',
             'is_active' => 'boolean',
         ]);
+
+        $validated['principal_name'] = ucwords(strtolower($validated['principal_name']));
 
         $institution->update($validated);
 

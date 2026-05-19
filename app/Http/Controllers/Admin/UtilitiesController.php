@@ -13,6 +13,7 @@ use App\Models\ProfileDetail;
 use App\Models\FeeFundCategory;
 use App\Models\Level;
 use App\Models\SchoolClass;
+use App\Models\Institution;
 
 class UtilitiesController extends Controller
 {
@@ -38,7 +39,7 @@ class UtilitiesController extends Controller
     {
         $endpoints = [
             'student'     => 'https://sis.fgei.gov.pk/api/FetchAllStudents',
-            'institution' => 'https://sis.fgei.gov.pk/api/FetchAllInstitutions',
+            'institution' => 'https://hrms.fgei.gov.pk/api/FetchInstitutions',
             'inductee'    => 'https://induction.fgei.gov.pk/api/FetchAllInductees',
         ];
 
@@ -59,10 +60,20 @@ class UtilitiesController extends Controller
             $encryptedData = $response->json('data');
             $decryptedData = $this->encrypter->decrypt($encryptedData);
 
-            // Take snapshot before processing sync
-            \App\Services\ProcedureService::snapshotSync();
+            if (is_string($decryptedData)) {
+                $decryptedData = json_decode($decryptedData, true);
+            }
 
             DB::beginTransaction();
+
+            // Take snapshot before processing sync
+            if ($type === 'institution') {
+                \App\Services\ProcedureService::snapshotSyncInstitutions();
+            } elseif ($type === 'student') {
+                \App\Services\ProcedureService::snapshotSync();
+            }
+
+            $syncService = app(\App\Services\ConsumerProfileService::class);
 
             switch ($type) {
                 case 'student':
@@ -141,27 +152,20 @@ class UtilitiesController extends Controller
                         $classId = $classesMap[$className];
 
                         // 1. Process Consumer
-                        $consumer = Consumer::firstOrNew(['identification_number' => $validated['std_form_b']]);
-                        $consumer->fill([
+                        $consumerKeys = ['identification_number' => $validated['std_form_b']];
+                        $consumerData = [
                             'consumer_type' => 'student',
                             'consumer_number' => $validated['consumer_number'],
                             'institution_id' => $validated['s_school_idFk'],
                             'region_id' => $validated['s_region_idFk'],
                             'is_active' => 1,
-                        ]);
-
-                        $consumerIsDirty = $consumer->isDirty();
-                        $consumer->save();
-                        $consumerWasCreated = $consumer->wasRecentlyCreated;
+                        ];
 
                         // 2. Process ProfileDetail
-                        $profile = ProfileDetail::firstOrNew([
-                            'consumer_id' => $consumer->id,
-                            'profile_type' => 'student'
-                        ]);
-                        $profile->fill([
-                            'name' => $validated['s_name'],
-                            'father_or_guardian_name' => $validated['father_or_guardian_name'],
+                        $profileKeys = ['profile_type' => 'student'];
+                        $profileData = [
+                            'name' => ucwords(strtolower($validated['s_name'])),
+                            'father_or_guardian_name' => ucwords(strtolower($validated['father_or_guardian_name'])),
                             'region_name' => $validated['region_name'],
                             'institution_name' => $validated['institution_name'],
                             'institution_level' => $validated['educational_level'],
@@ -171,20 +175,108 @@ class UtilitiesController extends Controller
                             'section' => $validated['section_name'],
                             'fee_fund_category_ids' => $feeFundCategoryIds,
                             'is_active' => 1,
+                        ];
+
+                        $resultStats = $syncService->syncConsumerAndProfile($consumerKeys, $consumerData, $profileKeys, $profileData);
+                        $stats['inserted'] += $resultStats['inserted'];
+                        $stats['updated'] += $resultStats['updated'];
+                        $stats['unchanged'] += $resultStats['unchanged'];
+                    }
+
+                    DB::commit();
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Data processed successfully',
+                        'data' => $decryptedData,
+                        'stats' => $stats
+                    ]);
+                    break;
+                case 'institution':
+                    $stats = [
+                        'inserted' => 0,
+                        'updated' => 0,
+                        'unchanged' => 0,
+                    ];
+
+                    $levelsMap = Level::pluck('id', 'level')->toArray();
+
+                    foreach ($decryptedData as $decrypted) {
+                        $validator = Validator::make((array) $decrypted, [
+                            's_school_idFk' => 'required|integer|digits_between:1,3',
+                            's_region_idFk' => 'required|integer|digits_between:1,3',
+                            'region_name' => 'required|string|max:255',
+                            'institution_name' => 'required|string|max:255',
+                            'educational_level' => 'required|string|max:255',
+                            'principal_name' => 'required|string|max:255',
+                            'principal_cnic' => 'required|integer|digits_between:1,13',
                         ]);
 
-                        $profileIsDirty = $profile->isDirty();
-                        $profile->save();
-                        $profileWasCreated = $profile->wasRecentlyCreated;
-
-                        // 3. Update stats
-                        if ($consumerWasCreated || $profileWasCreated) {
-                            $stats['inserted']++;
-                        } elseif ($consumerIsDirty || $profileIsDirty) {
-                            $stats['updated']++;
-                        } else {
-                            $stats['unchanged']++;
+                        if ($validator->fails()) {
+                            DB::rollBack();
+                            return response()->json([
+                                'success' => false,
+                                'message' => 'Validation failed',
+                                'errors' => $validator->errors()
+                            ], 422);
                         }
+
+                        $validated = $validator->validated();
+
+                        $regionPadded = str_pad($validated['s_region_idFk'], 2, '0', STR_PAD_LEFT);
+                        $instPadded = str_pad($validated['s_school_idFk'], 3, '0', STR_PAD_LEFT);
+
+                        $consumerNumber = $regionPadded . '000000' . $instPadded;
+                        $identificationNumber = $regionPadded . '00000000' . $instPadded;
+
+                        // Map Level
+                        $levelName = $validated['educational_level'];
+                        if (!isset($levelsMap[$levelName])) {
+                            $newLevel = Level::create(['level' => $levelName, 'display_order' => count($levelsMap) + 1]);
+                            $levelsMap[$levelName] = $newLevel->id;
+                        }
+                        $levelId = $levelsMap[$levelName];
+
+                        // 1. Process Institution Model
+                        Institution::updateOrCreate(
+                            ['id' => $validated['s_school_idFk']],
+                            [
+                                'name' => $validated['institution_name'],
+                                'region_id' => $validated['s_region_idFk'],
+                                'level_id' => $levelId,
+                                'principal_name' => ucwords(strtolower($validated['principal_name'])),
+                                'principal_cnic' => $validated['principal_cnic'],
+                                'is_active' => 1,
+                            ]
+                        );
+
+                        // 2. Process Consumer
+                        $consumerKeys = ['identification_number' => $identificationNumber];
+                        $consumerData = [
+                            'consumer_type' => 'institution',
+                            'consumer_number' => $consumerNumber,
+                            'institution_id' => $validated['s_school_idFk'],
+                            'region_id' => $validated['s_region_idFk'],
+                            'is_active' => 1,
+                        ];
+
+                        // 3. Process ProfileDetail
+                        $profileKeys = ['profile_type' => 'institution'];
+                        $profileData = [
+                            'name' => ucwords(strtolower($validated['principal_name'])),
+                            'region_name' => $validated['region_name'],
+                            'institution_name' => $validated['institution_name'],
+                            'institution_level' => $validated['educational_level'],
+                            'institution_id' => $validated['s_school_idFk'],
+                            'level_id' => $levelId,
+                            'region_id' => $validated['s_region_idFk'],
+                            'is_active' => 1,
+                        ];
+
+                        $resultStats = $syncService->syncConsumerAndProfile($consumerKeys, $consumerData, $profileKeys, $profileData);
+                        $stats['inserted'] += $resultStats['inserted'];
+                        $stats['updated'] += $resultStats['updated'];
+                        $stats['unchanged'] += $resultStats['unchanged'];
                     }
 
                     DB::commit();
@@ -206,7 +298,7 @@ class UtilitiesController extends Controller
                 'success' => true,
                 'data' => $decryptedData
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,

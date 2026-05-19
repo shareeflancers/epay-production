@@ -41,6 +41,8 @@ export default function InstitutionIndex({ institutions, regions, levels, filter
         name: '',
         region_id: '',
         level_id: '',
+        principal_name: '',
+        principal_cnic: '',
         is_active: true,
     });
 
@@ -52,6 +54,8 @@ export default function InstitutionIndex({ institutions, regions, levels, filter
             name: '',
             region_id: '',
             level_id: '',
+            principal_name: '',
+            principal_cnic: '',
             is_active: true,
         });
         open();
@@ -64,6 +68,8 @@ export default function InstitutionIndex({ institutions, regions, levels, filter
             name: row.name || '',
             region_id: String(row.region_id || ''),
             level_id: String(row.level_id || ''),
+            principal_name: row.principal_name || '',
+            principal_cnic: row.principal_cnic || '',
             is_active: !!row.is_active,
         });
         open();
@@ -162,6 +168,8 @@ export default function InstitutionIndex({ institutions, regions, levels, filter
     // Column definitions
     const columns = useMemo(() => [
         { key: 'name', label: 'Name', sortable: true },
+        { key: 'principal_name', label: 'Principal', sortable: true, render: (val) => val || '-' },
+        { key: 'principal_cnic', label: 'Principal CNIC', sortable: true, render: (val) => val || '-' },
         {
             key: 'region_name',
             label: 'Region',
@@ -271,6 +279,23 @@ export default function InstitutionIndex({ institutions, regions, levels, filter
                                 error={errors.name}
                                 required
                             />
+
+                            <Group grow>
+                                <ThemedInput
+                                    label="Principal Name"
+                                    placeholder="Enter principal's name"
+                                    value={data.principal_name}
+                                    onChange={(e) => setData('principal_name', e.target.value)}
+                                    error={errors.principal_name}
+                                />
+                                <ThemedInput
+                                    label="Principal CNIC"
+                                    placeholder="Enter CNIC (max 15 chars)"
+                                    value={data.principal_cnic}
+                                    onChange={(e) => setData('principal_cnic', e.target.value)}
+                                    error={errors.principal_cnic}
+                                />
+                            </Group>
 
                             <ThemedSelect
                                 label="Region"
