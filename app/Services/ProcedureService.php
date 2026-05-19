@@ -14,13 +14,17 @@ class ProcedureService
 {
     /**
      * Create a snapshot before Step 1 (Archive)
+     * To prevent "MySQL server has gone away" due to large payloads (like challan_snapshot JSON blobs),
+     * we only store the list of challan numbers that are being archived.
      */
     public static function snapshotArchive()
     {
-        $data = ActiveChallan::all()->toArray();
+        $challanNos = ActiveChallan::pluck('challan_no')->toArray();
         return ProcedureSnapshot::create([
             'step_name' => 'archive',
-            'snapshot_data' => $data,
+            'snapshot_data' => [
+                'challan_nos' => $challanNos
+            ],
             'batch_id' => 'batch_' . time(),
         ]);
     }
@@ -118,12 +122,20 @@ class ProcedureService
     private static function rollbackArchive($snapshot)
     {
         $data = $snapshot->snapshot_data;
-        foreach ($data as $item) {
-            // Restore to active_challans
-            ActiveChallan::create($item);
+        $challanNos = $data['challan_nos'] ?? [];
 
-            // Delete from history if it exists
-            ChallanHistory::where('challan_no', $item['challan_no'])->delete();
+        if (empty($challanNos)) {
+            return;
+        }
+
+        // Restore from ChallanHistory using the archived challan numbers
+        $historyRecords = ChallanHistory::whereIn('challan_no', $challanNos)->get();
+        foreach ($historyRecords as $record) {
+            $attributes = $record->getAttributes();
+            unset($attributes['id']); // Exclude primary key
+
+            ActiveChallan::create($attributes);
+            $record->delete();
         }
     }
 

@@ -192,7 +192,7 @@ class SettingsController extends Controller
             \App\Services\ProcedureService::snapshotArchive();
 
             // Process and move records in optimized chunks of 500
-            ActiveChallan::chunk(500, function ($challans) {
+            ActiveChallan::chunkById(500, function ($challans) {
                 $historyData = [];
                 $idsToDelete = [];
 
