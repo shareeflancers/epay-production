@@ -20,7 +20,7 @@ class DatabaseBackup extends Command
      *
      * @var string
      */
-    protected $description = 'Backup the database and remove backups older than 7 days';
+    protected $description = 'Backup the database and remove backups older than 1 day';
 
     /**
      * Execute the console command.
@@ -73,11 +73,11 @@ class DatabaseBackup extends Command
     }
 
     /**
-     * Delete backups older than 7 days
+     * Delete backups older than 1 day
      */
     private function cleanupOldBackups($path)
     {
-        $this->info('Cleaning up backups older than 7 days...');
+        $this->info('Cleaning up backups older than 1 day...');
         $files = File::files($path);
 
         $deletedCount = 0;
@@ -86,7 +86,7 @@ class DatabaseBackup extends Command
         foreach ($files as $file) {
             if ($file->getExtension() === 'sql') {
                 $lastModified = \Carbon\Carbon::createFromTimestamp($file->getMTime());
-                if ($lastModified->diffInDays($now) >= 7) {
+                if ($lastModified->diffInDays($now) >= 1) {
                     File::delete($file->getPathname());
                     $deletedCount++;
                     Log::info('DatabaseBackup: Deleted old backup ' . $file->getFilename());
