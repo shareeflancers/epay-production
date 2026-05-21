@@ -25,6 +25,7 @@ class Consumer extends Model
         'consumer_number',
         'institution_id',
         'region_id',
+        'sis_student_id',
         'is_active',
     ];
 

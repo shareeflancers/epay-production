@@ -158,6 +158,7 @@ class UtilitiesController extends Controller
                             'consumer_number' => $validated['consumer_number'],
                             'institution_id' => $validated['s_school_idFk'],
                             'region_id' => $validated['s_region_idFk'],
+                            'sis_student_id' => $validated['s_id'],
                             'is_active' => 1,
                         ];
 

@@ -220,6 +220,7 @@ class ApiController extends Controller
                 case 'institution':
                     $results = DB::table('active_challans')
                         ->join('institutions', 'active_challans.institution_id', '=', 'institutions.id')
+                        ->leftJoin('consumers', 'active_challans.consumer_id', '=', 'consumers.id')
                         ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
                             'institutions.id as group_id',
@@ -227,6 +228,8 @@ class ApiController extends Controller
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then consumers.sis_student_id end) as paid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then consumers.sis_student_id end) as unpaid_student_ids'),
                         ]);
 
                     if ($institutionId) {
@@ -239,6 +242,7 @@ class ApiController extends Controller
                 case 'region':
                     $results = DB::table('active_challans')
                         ->join('regions', 'active_challans.region_id', '=', 'regions.id')
+                        ->leftJoin('consumers', 'active_challans.consumer_id', '=', 'consumers.id')
                         ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
                             'regions.id as group_id',
@@ -246,6 +250,8 @@ class ApiController extends Controller
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then consumers.sis_student_id end) as paid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then consumers.sis_student_id end) as unpaid_student_ids'),
                         ]);
 
                     if ($regionId) {
@@ -258,6 +264,7 @@ class ApiController extends Controller
                 case 'class_section':
                     $results = DB::table('active_challans')
                         ->join('school_classes', 'active_challans.school_class_id', '=', 'school_classes.id')
+                        ->leftJoin('consumers', 'active_challans.consumer_id', '=', 'consumers.id')
                         ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
                             DB::raw('CONCAT(active_challans.institution_id, "-", active_challans.school_class_id, "-", active_challans.section) as group_id'),
@@ -265,6 +272,8 @@ class ApiController extends Controller
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then consumers.sis_student_id end) as paid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then consumers.sis_student_id end) as unpaid_student_ids'),
                         ]);
 
                     if ($institutionId) {
@@ -284,6 +293,7 @@ class ApiController extends Controller
                     $results = DB::table('active_challans')
                         ->join('institutions', 'active_challans.institution_id', '=', 'institutions.id')
                         ->join('school_classes', 'active_challans.school_class_id', '=', 'school_classes.id')
+                        ->leftJoin('consumers', 'active_challans.consumer_id', '=', 'consumers.id')
                         ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
                             DB::raw('CONCAT(active_challans.institution_id, "-", active_challans.school_class_id, "-", active_challans.section) as group_id'),
@@ -293,6 +303,8 @@ class ApiController extends Controller
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then consumers.sis_student_id end) as paid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then consumers.sis_student_id end) as unpaid_student_ids'),
                         ]);
 
                     if ($institutionId) {
@@ -313,6 +325,7 @@ class ApiController extends Controller
 
                 default: // overall
                     $results = DB::table('active_challans')
+                        ->leftJoin('consumers', 'active_challans.consumer_id', '=', 'consumers.id')
                         ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
                             DB::raw('"Overall" as group_id'),
@@ -320,6 +333,8 @@ class ApiController extends Controller
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then consumers.sis_student_id end) as paid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then consumers.sis_student_id end) as unpaid_student_ids'),
                         ])
                         ->groupBy('fee_fund_category.category_title')
                         ->get();
@@ -405,8 +420,14 @@ class ApiController extends Controller
                     $formatted[$groupId]['group_name'] = $row->group_name;
                 }
 
-                $formatted[$groupId]['total_paid'] = 0;
-                $formatted[$groupId]['total_unpaid'] = 0;
+                $formatted[$groupId]['total_paid'] = [
+                    'count' => 0,
+                    'student_ids' => []
+                ];
+                $formatted[$groupId]['total_unpaid'] = [
+                    'count' => 0,
+                    'student_ids' => []
+                ];
 
                 if (!$fee_fund_category_id) {
                     $formatted[$groupId]['categories'] = [];
@@ -421,14 +442,40 @@ class ApiController extends Controller
                 }
             }
 
-            $formatted[$groupId]['total_paid'] += $row->paid_count;
-            $formatted[$groupId]['total_unpaid'] += $row->unpaid_count;
+            $formatted[$groupId]['total_paid']['count'] += $row->paid_count;
+            $formatted[$groupId]['total_unpaid']['count'] += $row->unpaid_count;
+
+            $paidIds = [];
+            if (isset($row->paid_student_ids) && $row->paid_student_ids !== null && $row->paid_student_ids !== '') {
+                $paidIds = array_filter(array_map('intval', explode(',', $row->paid_student_ids)));
+            }
+
+            $unpaidIds = [];
+            if (isset($row->unpaid_student_ids) && $row->unpaid_student_ids !== null && $row->unpaid_student_ids !== '') {
+                $unpaidIds = array_filter(array_map('intval', explode(',', $row->unpaid_student_ids)));
+            }
+
+            $formatted[$groupId]['total_paid']['student_ids'] = array_values(array_unique(array_merge(
+                $formatted[$groupId]['total_paid']['student_ids'],
+                $paidIds
+            )));
+
+            $formatted[$groupId]['total_unpaid']['student_ids'] = array_values(array_unique(array_merge(
+                $formatted[$groupId]['total_unpaid']['student_ids'],
+                $unpaidIds
+            )));
 
             if (!$fee_fund_category_id && isset($row->category_title) && $row->category_title) {
                 $formatted[$groupId]['categories'][] = [
                     'name' => $row->category_title,
-                    'paid' => $row->paid_count,
-                    'unpaid' => $row->unpaid_count
+                    'paid' => [
+                        'count' => $row->paid_count,
+                        'student_ids' => array_values(array_unique($paidIds))
+                    ],
+                    'unpaid' => [
+                        'count' => $row->unpaid_count,
+                        'student_ids' => array_values(array_unique($unpaidIds))
+                    ]
                 ];
             }
         }
