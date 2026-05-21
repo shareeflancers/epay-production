@@ -208,6 +208,14 @@ class ApiController extends Controller
             $section = $request->input('section');
             $fee_fund_category_id = $request->input('fee_fund_category_id');
 
+            $filters = [
+                'fee_fund_category_id' => $fee_fund_category_id,
+                'institution_id' => $institutionId,
+                'region_id' => $regionId,
+                'school_class_id' => $classId,
+                'section' => $section,
+            ];
+
             switch ($type) {
                 case 'institution':
                     $results = DB::table('active_challans')
@@ -225,7 +233,7 @@ class ApiController extends Controller
                         $results->where('active_challans.institution_id', $institutionId);
                     }
 
-                    $data = $this->formatAnalyticsData($results->groupBy('institutions.id', 'institutions.name', 'fee_fund_category.category_title')->get());
+                    $data = $this->formatAnalyticsData($results->groupBy('institutions.id', 'institutions.name', 'fee_fund_category.category_title')->get(), $filters, 'institution');
                     break;
 
                 case 'region':
@@ -244,7 +252,7 @@ class ApiController extends Controller
                         $results->where('active_challans.region_id', $regionId);
                     }
 
-                    $data = $this->formatAnalyticsData($results->groupBy('regions.id', 'regions.name', 'fee_fund_category.category_title')->get());
+                    $data = $this->formatAnalyticsData($results->groupBy('regions.id', 'regions.name', 'fee_fund_category.category_title')->get(), $filters, 'region');
                     break;
 
                 case 'class_section':
@@ -269,16 +277,19 @@ class ApiController extends Controller
                         $results->where('active_challans.section', $section);
                     }
 
-                    $data = $this->formatAnalyticsData($results->groupBy('group_id', 'group_name', 'fee_fund_category.category_title')->get());
+                    $data = $this->formatAnalyticsData($results->groupBy('group_id', 'group_name', 'fee_fund_category.category_title')->get(), $filters, 'class_section');
                     break;
 
                 case 'institution_category':
                     $results = DB::table('active_challans')
                         ->join('institutions', 'active_challans.institution_id', '=', 'institutions.id')
+                        ->join('school_classes', 'active_challans.school_class_id', '=', 'school_classes.id')
                         ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
-                            'institutions.id as group_id',
+                            DB::raw('CONCAT(active_challans.institution_id, "-", active_challans.school_class_id, "-", active_challans.section) as group_id'),
+                            'school_classes.name as class_name',
                             'institutions.name as group_name',
+                            'active_challans.section',
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
@@ -291,7 +302,13 @@ class ApiController extends Controller
                         $results->where('active_challans.fee_fund_category_id', $fee_fund_category_id);
                     }
 
-                    $data = $this->formatAnalyticsData($results->groupBy('institutions.id', 'institutions.name', 'fee_fund_category.category_title')->get());
+                    $data = $this->formatAnalyticsData($results->groupBy(
+                        'active_challans.institution_id',
+                        'active_challans.school_class_id',
+                        'active_challans.section',
+                        'school_classes.name',
+                        'fee_fund_category.category_title'
+                    )->get(), $filters, 'institution_category');
                     break;
 
                 default: // overall
@@ -306,14 +323,53 @@ class ApiController extends Controller
                         ])
                         ->groupBy('fee_fund_category.category_title')
                         ->get();
-                    $data = $this->formatAnalyticsData($results);
+                    $data = $this->formatAnalyticsData($results, $filters, 'overall');
                     break;
             }
 
-            return response()->json([
+            $responsePayload = [
                 'success' => true,
-                'data' => $data
-            ]);
+            ];
+
+            if ($fee_fund_category_id) {
+                $responsePayload['fee_fund_category_id'] = (int) $fee_fund_category_id;
+                $category = FeeFundCategory::find($fee_fund_category_id);
+                if ($category) {
+                    $responsePayload['category_name'] = $category->category_title;
+                }
+            }
+
+            if ($institutionId) {
+                $responsePayload['institution_id'] = (int) $institutionId;
+                $institution = DB::table('institutions')->where('id', $institutionId)->first();
+                if ($institution) {
+                    $responsePayload['institution_name'] = $institution->name;
+                }
+            }
+
+            if ($regionId) {
+                $responsePayload['region_id'] = (int) $regionId;
+                $region = DB::table('regions')->where('id', $regionId)->first();
+                if ($region) {
+                    $responsePayload['region_name'] = $region->name;
+                }
+            }
+
+            if ($classId) {
+                $responsePayload['school_class_id'] = (int) $classId;
+                $schoolClass = DB::table('school_classes')->where('id', $classId)->first();
+                if ($schoolClass) {
+                    $responsePayload['class_name'] = $schoolClass->name;
+                }
+            }
+
+            if ($section) {
+                $responsePayload['section'] = $section;
+            }
+
+            $responsePayload['data'] = $data;
+
+            return response()->json($responsePayload);
 
         } catch (Throwable $e) {
             Log::error('API Error in fetchAnalytics: ' . $e->getMessage());
@@ -321,29 +377,54 @@ class ApiController extends Controller
         }
     }
 
-    /**
-     * Format flat results into a nested structure with category breakdown.
-     */
-    private function formatAnalyticsData($results)
+    private function formatAnalyticsData($results, $filters = [], $type = 'overall')
     {
         $formatted = [];
+        $fee_fund_category_id = $filters['fee_fund_category_id'] ?? null;
+        $institution_id = $filters['institution_id'] ?? null;
+        $region_id = $filters['region_id'] ?? null;
+        $school_class_id = $filters['school_class_id'] ?? null;
+        $section = $filters['section'] ?? null;
 
         foreach ($results as $row) {
             $groupId = $row->group_id;
 
             if (!isset($formatted[$groupId])) {
-                $formatted[$groupId] = [
-                    'group_name' => $row->group_name,
-                    'total_paid' => 0,
-                    'total_unpaid' => 0,
-                    'categories' => []
-                ];
+                $formatted[$groupId] = [];
+
+                $isGroupNameRedundant = false;
+                if ($type === 'institution' && $institution_id) {
+                    $isGroupNameRedundant = true;
+                } elseif ($type === 'region' && $region_id) {
+                    $isGroupNameRedundant = true;
+                } elseif ($type === 'institution_category' && $institution_id) {
+                    $isGroupNameRedundant = true;
+                }
+
+                if (!$isGroupNameRedundant) {
+                    $formatted[$groupId]['group_name'] = $row->group_name;
+                }
+
+                $formatted[$groupId]['total_paid'] = 0;
+                $formatted[$groupId]['total_unpaid'] = 0;
+
+                if (!$fee_fund_category_id) {
+                    $formatted[$groupId]['categories'] = [];
+                }
+
+                if (isset($row->class_name) && !$school_class_id) {
+                    $formatted[$groupId]['class_name'] = $row->class_name;
+                }
+
+                if (isset($row->section) && !$section) {
+                    $formatted[$groupId]['section'] = $row->section;
+                }
             }
 
             $formatted[$groupId]['total_paid'] += $row->paid_count;
             $formatted[$groupId]['total_unpaid'] += $row->unpaid_count;
 
-            if ($row->category_title) {
+            if (!$fee_fund_category_id && isset($row->category_title) && $row->category_title) {
                 $formatted[$groupId]['categories'][] = [
                     'name' => $row->category_title,
                     'paid' => $row->paid_count,
