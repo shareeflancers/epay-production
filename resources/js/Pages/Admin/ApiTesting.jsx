@@ -25,7 +25,7 @@ import { adminNavItems } from '@/config/navigation';
 import axios from 'axios';
 
 export default function ApiTesting() {
-    const { primaryColor } = useTheme();
+    const { ui, colorConfig } = useTheme();
     const [loading, setLoading] = useState(false);
     const [response, setResponse] = useState(null);
     const [error, setError] = useState(null);
@@ -90,8 +90,8 @@ export default function ApiTesting() {
                                 variant="light"
                                 size="sm"
                                 style={{
-                                    backgroundColor: primaryColor.light,
-                                    color: primaryColor.primary,
+                                    backgroundColor: colorConfig.light,
+                                    color: colorConfig.primary,
                                 }}
                             >
                                 Developer
@@ -140,7 +140,7 @@ export default function ApiTesting() {
                                     <Button
                                         onClick={() => callApi('get', '/fee-categories')}
                                         loading={loading}
-                                        color={primaryColor}
+                                        color={colorConfig.primary}
                                     >
                                         Execute API Call
                                     </Button>
@@ -164,7 +164,7 @@ export default function ApiTesting() {
                                     <Button
                                         onClick={() => callApi('get', '/challan/single', { identification_number: singleId })}
                                         loading={loading}
-                                        color={primaryColor}
+                                        color={colorConfig.primary}
                                         disabled={!singleId}
                                     >
                                         Execute API Call
@@ -189,7 +189,7 @@ export default function ApiTesting() {
                                     <Button
                                         onClick={() => callApi('post', '/challan/bulk', null, { identification_numbers: bulkIds.split(',').map(i => i.trim()).filter(i => i) })}
                                         loading={loading}
-                                        color={primaryColor}
+                                        color={colorConfig.primary}
                                         disabled={!bulkIds}
                                     >
                                         Execute API Call
@@ -214,7 +214,7 @@ export default function ApiTesting() {
                                     <Button
                                         onClick={() => callApi('get', '/challans/status', { identification_numbers: statusIds.split(',').map(i => i.trim()).filter(i => i) })}
                                         loading={loading}
-                                        color={primaryColor}
+                                        color={colorConfig.primary}
                                         disabled={!statusIds}
                                     >
                                         Execute API Call
@@ -241,6 +241,7 @@ export default function ApiTesting() {
                                                 { value: 'institution', label: 'By Institution' },
                                                 { value: 'region', label: 'By Region' },
                                                 { value: 'class_section', label: 'By Class & Section' },
+                                                { value: 'institution_category', label: 'By Institution & Category' },
                                             ]}
                                         />
 
@@ -253,7 +254,7 @@ export default function ApiTesting() {
                                             />
                                         )}
 
-                                        {(analyticsType === 'institution' || analyticsType === 'class_section') && (
+                                        {(analyticsType === 'institution' || analyticsType === 'class_section' || analyticsType === 'institution_category') && (
                                             <TextInput
                                                 label="Institution ID"
                                                 placeholder="e.g. 5"
@@ -276,23 +277,38 @@ export default function ApiTesting() {
                                                     value={analyticsFilters.section}
                                                     onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, section: e.target.value })}
                                                 />
-                                                <TextInput
-                                                    label="Fee Fund Category ID"
-                                                    placeholder="e.g. 2"
-                                                    value={analyticsFilters.fee_fund_category_id}
-                                                    onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, fee_fund_category_id: e.target.value })}
-                                                />
                                             </>
+                                        )}
+
+                                        {analyticsType === 'institution_category' && (
+                                            <TextInput
+                                                label="Fee Fund Category ID"
+                                                placeholder="e.g. 2"
+                                                value={analyticsFilters.fee_fund_category_id}
+                                                onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, fee_fund_category_id: e.target.value })}
+                                            />
                                         )}
                                     </Group>
 
                                     <Button
-                                        onClick={() => callApi('get', '/challans/analytics', {
-                                            type: analyticsType,
-                                            ...analyticsFilters
-                                        })}
+                                        onClick={() => {
+                                            const params = { type: analyticsType };
+                                            if (analyticsType === 'region') {
+                                                if (analyticsFilters.region_id) params.region_id = analyticsFilters.region_id;
+                                            } else if (analyticsType === 'institution') {
+                                                if (analyticsFilters.institution_id) params.institution_id = analyticsFilters.institution_id;
+                                            } else if (analyticsType === 'class_section') {
+                                                if (analyticsFilters.institution_id) params.institution_id = analyticsFilters.institution_id;
+                                                if (analyticsFilters.school_class_id) params.school_class_id = analyticsFilters.school_class_id;
+                                                if (analyticsFilters.section) params.section = analyticsFilters.section;
+                                            } else if (analyticsType === 'institution_category') {
+                                                if (analyticsFilters.institution_id) params.institution_id = analyticsFilters.institution_id;
+                                                if (analyticsFilters.fee_fund_category_id) params.fee_fund_category_id = analyticsFilters.fee_fund_category_id;
+                                            }
+                                            callApi('get', '/challans/analytics', params);
+                                        }}
                                         loading={loading}
-                                        color={primaryColor}
+                                        color={colorConfig.primary}
                                         mt="md"
                                     >
                                         Execute API Call
