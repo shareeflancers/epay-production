@@ -302,4 +302,74 @@
         box-shadow: 0 4px 15px rgba(255,255,255,0.2);
         font-size: 16px;
     }
+
+    /* ================================================================ */
+    /* VOUCHER PRINT COMPACTNESS CSS                                    */
+    /* ================================================================ */
+    .voucher-copy {
+        padding: 3mm 4mm !important;
+        justify-content: flex-start !important;
+    }
+    .voucher-copy .header {
+        margin-bottom: 3px !important;
+        padding-bottom: 3px !important;
+    }
+    .voucher-copy .logo {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    .voucher-copy .institution-name {
+        font-size: 9px !important;
+        line-height: 1.1 !important;
+    }
+    .voucher-copy .billing-month {
+        font-size: 7.5px !important;
+        margin: 1px 0 !important;
+    }
+    .voucher-copy .copy-tag {
+        font-size: 7.5px !important;
+        padding: 1px 5px !important;
+        margin-top: 1px !important;
+    }
+    .voucher-copy .qr-section {
+        margin: 3px 0 !important;
+        padding: 3px 5px !important;
+        border-radius: 6px !important;
+    }
+    .voucher-copy .qr-code svg {
+        width: 44px !important;
+        height: 44px !important;
+    }
+    .voucher-copy .consumer-label {
+        font-size: 7px !important;
+    }
+    .voucher-copy .consumer-value {
+        font-size: 10px !important;
+    }
+    .voucher-copy .details-table {
+        margin: 2px 0 !important;
+    }
+    .voucher-copy .details-table th, .voucher-copy .details-table td {
+        padding: 2px 4px !important;
+        font-size: 7.5px !important;
+    }
+    .voucher-copy .details-table th {
+        width: 35% !important;
+    }
+    .voucher-copy .signature-section {
+        padding-top: 4px !important;
+        margin-top: auto !important;
+    }
+    .voucher-copy .bank-stamp-area {
+        width: 40px !important;
+        height: 40px !important;
+        bottom: 25px !important;
+        font-size: 6.5px !important;
+    }
+    .voucher-copy .signature-label {
+        font-size: 7px !important;
+    }
+    .voucher-copy .signature-line {
+        margin-bottom: 2px !important;
+    }
 </style>

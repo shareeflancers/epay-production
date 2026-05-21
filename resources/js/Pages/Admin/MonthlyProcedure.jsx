@@ -26,7 +26,8 @@ import {
     IconCalendarMonth,
     IconArrowRight,
     IconHistory,
-    IconRestore
+    IconRestore,
+    IconReceipt
 } from '@tabler/icons-react';
 import { AdminLayout } from '@/Components/Layout';
 import { useTheme } from '@/theme';
@@ -138,6 +139,15 @@ export default function MonthlyProcedure() {
         });
     };
 
+    const runStep5 = () => {
+        setProgressModal({
+            opened: true,
+            url: '/admin/utilities/generateVouchers',
+            label: 'Generate Vouchers',
+            method: 'POST'
+        });
+    };
+
     const onModalClose = () => {
         setProgressModal(prev => ({ ...prev, opened: false }));
         fetchSnapshots();
@@ -154,6 +164,9 @@ export default function MonthlyProcedure() {
                 activeStep = 3;
                 if (snapshots.sync_institutions && !snapshots.sync_institutions.is_rolled_back && new Date(snapshots.sync_institutions.created_at) > new Date(snapshots.generate.created_at)) {
                     activeStep = 4;
+                    if (snapshots.generate_vouchers && !snapshots.generate_vouchers.is_rolled_back && new Date(snapshots.generate_vouchers.created_at) > new Date(snapshots.sync_institutions.created_at)) {
+                        activeStep = 5;
+                    }
                 }
             }
         }
@@ -175,13 +188,14 @@ export default function MonthlyProcedure() {
                         <Stepper.Step label="Sync Students" description="Updates profiles and fees" />
                         <Stepper.Step label="Generate Challans" description="Calculates new fees and arrears" />
                         <Stepper.Step label="Sync Institutions" description="Fetches institution consumers" />
+                        <Stepper.Step label="Generate Vouchers" description="Aggregates fund heads per institution" />
                         <Stepper.Completed>
-                            <Text fw={500} ta="center" c="green">Monthly procedure complete! All challans generated.</Text>
+                            <Text fw={500} ta="center" c="green">Monthly procedure complete! All challans and vouchers generated.</Text>
                         </Stepper.Completed>
                     </Stepper>
                 </Paper>
 
-                <SimpleGrid cols={{ base: 1, md: 2, lg: 4 }} spacing="lg">
+                <SimpleGrid cols={{ base: 1, md: 3, lg: 5 }} spacing="lg">
                     {/* Step 1 Card */}
                     <Paper p="xl" radius="md" withBorder shadow="sm">
                         <Stack h="100%" justify="space-between">
@@ -368,6 +382,51 @@ export default function MonthlyProcedure() {
                                         leftSection={<IconHistory size={14} />}
                                     >
                                         Rollback Step 4
+                                    </Button>
+                                )}
+                            </Stack>
+                        </Stack>
+                    </Paper>
+
+                    {/* Step 5 Card */}
+                    <Paper p="xl" radius="md" withBorder shadow="sm">
+                        <Stack h="100%" justify="space-between">
+                            <Box>
+                                <Group justify="space-between" mb="md">
+                                    <ThemeIcon size={44} radius="md" color="orange" variant="light">
+                                        <IconReceipt size={26} />
+                                    </ThemeIcon>
+                                    <Badge variant="outline">STEP 5</Badge>
+                                </Group>
+                                <Title order={4} mb="xs">Generate Vouchers</Title>
+                                <Text size="sm" c="dimmed" mb="md">
+                                    Aggregate RDF, CDF, CSF & Security Fund from paid student challans into institution-level vouchers.
+                                </Text>
+                                <Alert icon={<IconAlertCircle size={16} />} color="orange" variant="light" mb="md">
+                                    Requires Step 4 (Sync Institutions) to be complete first.
+                                </Alert>
+                            </Box>
+                            <Stack gap="xs">
+                                <Button
+                                    fullWidth
+                                    leftSection={<IconReceipt size={16} />}
+                                    onClick={runStep5}
+                                    loading={loading}
+                                    color="orange"
+                                >
+                                    Generate Vouchers
+                                </Button>
+                                {snapshots.generate_vouchers && !snapshots.generate_vouchers.is_rolled_back && (
+                                    <Button
+                                        fullWidth
+                                        variant="subtle"
+                                        color="red"
+                                        size="xs"
+                                        onClick={() => runRollback(snapshots.generate_vouchers.id)}
+                                        loading={loading}
+                                        leftSection={<IconHistory size={14} />}
+                                    >
+                                        Rollback Step 5
                                     </Button>
                                 )}
                             </Stack>

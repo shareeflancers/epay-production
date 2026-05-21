@@ -45,7 +45,8 @@ export default function ApiTesting() {
         institution_id: '',
         region_id: '',
         school_class_id: '',
-        section: ''
+        section: '',
+        fee_fund_category_id: ''
     });
 
     const callApi = async (method, endpoint, params = null, body = null) => {
@@ -248,7 +249,7 @@ export default function ApiTesting() {
                                                 label="Region ID"
                                                 placeholder="e.g. 1"
                                                 value={analyticsFilters.region_id}
-                                                onChange={(e) => setAnalyticsFilters({...analyticsFilters, region_id: e.target.value})}
+                                                onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, region_id: e.target.value })}
                                             />
                                         )}
 
@@ -257,7 +258,7 @@ export default function ApiTesting() {
                                                 label="Institution ID"
                                                 placeholder="e.g. 5"
                                                 value={analyticsFilters.institution_id}
-                                                onChange={(e) => setAnalyticsFilters({...analyticsFilters, institution_id: e.target.value})}
+                                                onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, institution_id: e.target.value })}
                                             />
                                         )}
 
@@ -267,13 +268,19 @@ export default function ApiTesting() {
                                                     label="Class ID"
                                                     placeholder="e.g. 10"
                                                     value={analyticsFilters.school_class_id}
-                                                    onChange={(e) => setAnalyticsFilters({...analyticsFilters, school_class_id: e.target.value})}
+                                                    onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, school_class_id: e.target.value })}
                                                 />
                                                 <TextInput
                                                     label="Section"
                                                     placeholder="e.g. A"
                                                     value={analyticsFilters.section}
-                                                    onChange={(e) => setAnalyticsFilters({...analyticsFilters, section: e.target.value})}
+                                                    onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, section: e.target.value })}
+                                                />
+                                                <TextInput
+                                                    label="Fee Fund Category ID"
+                                                    placeholder="e.g. 2"
+                                                    value={analyticsFilters.fee_fund_category_id}
+                                                    onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, fee_fund_category_id: e.target.value })}
                                                 />
                                             </>
                                         )}

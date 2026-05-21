@@ -180,7 +180,7 @@ class ActiveChallan extends Model
 
     /**
      * Generate a snapshot of the challan data.
-     * 
+     *
      * @return array
      */
     public function generateSnapshot(): array
@@ -201,24 +201,49 @@ class ActiveChallan extends Model
             ->get();
 
         // Arrears details
-        $latestUnpaidHistory = self::where('consumer_id', $this->consumer_id)
+        $latestUnpaidHistory = \App\Models\ChallanHistory::where('consumer_id', $this->consumer_id)
             ->where('status', 'U')
-            ->where('id', '!=', $this->id)
-            ->latest()
+            ->orderBy('due_date', 'desc')
             ->first();
 
         $arrearsDetails = [];
         if ($latestUnpaidHistory) {
-            $arrearsDetails = [
-                'challan_no' => $latestUnpaidHistory->challan_no,
-                'due_date'   => $latestUnpaidHistory->due_date?->toDateString(),
-                'amount'     => $latestUnpaidHistory->amount_within_dueDate,
-            ];
+            $snap = json_decode($latestUnpaidHistory->challan_snapshot, true);
+            $prevArrearsDetails = $snap['arrears_calculation']['details'] ?? [];
+            if (!empty($prevArrearsDetails)) {
+                $arrearsDetails = $prevArrearsDetails;
+            }
+
+            $prevBillingMonth = $snap['billing_month'] ?? ($latestUnpaidHistory->due_date ? $latestUnpaidHistory->due_date->format('F Y') : 'Previous Month');
+
+            $exists = false;
+            foreach ($arrearsDetails as $detail) {
+                if ((($detail['challan_no'] ?? '') === $latestUnpaidHistory->challan_no) ||
+                    (empty($detail['challan_no']) && ($detail['billing_month'] ?? '') === $prevBillingMonth)) {
+                    $exists = true;
+                    break;
+                }
+            }
+
+            if (!$exists) {
+                $arrearsDetails[] = [
+                    'challan_no'    => $latestUnpaidHistory->challan_no,
+                    'billing_month' => $prevBillingMonth,
+                    'amount'        => (float) $latestUnpaidHistory->amount_base,
+                ];
+            }
+        }
+
+        $amountArrears = 0;
+        if ($latestUnpaidHistory) {
+            $amountArrears = (float) $latestUnpaidHistory->amount_base + (float) $latestUnpaidHistory->amount_arrears;
+        } else {
+            $amountArrears = $this->amount_arrears;
         }
 
         return [
             'arrears_calculation' => [
-                'amount_arrears' => $this->amount_arrears,
+                'amount_arrears' => $amountArrears,
                 'details'        => $arrearsDetails,
             ],
             'consumer' => [

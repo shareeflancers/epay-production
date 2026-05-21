@@ -125,6 +125,8 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::post('/settings/retry-sms-sync', [SettingsController::class, 'retrySmsSync'])->name('admin.settings.retry-sms-sync');
     Route::post('/utilities/generateChallans', [SettingsController::class, 'generateBulkChallans'])->name('admin.utilities.generateChallans');
     Route::post('/utilities/archiveChallans', [SettingsController::class, 'moveToHistory'])->name('admin.utilities.archiveChallans');
+    Route::post('/utilities/generateVouchers', [SettingsController::class, 'generateVouchers'])->name('admin.utilities.generateVouchers');
+
 
     // Database Backups & Import
     Route::get('/settings/database-backups', [DatabaseBackupController::class, 'index'])->name('admin.database-backups');
@@ -152,7 +154,7 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::post('/procedure/rollback/{id}', function ($id) {
         set_time_limit(300); // Increase to 5 minutes
         ini_set('memory_limit', '512M');
-        
+
         try {
             \App\Services\ProcedureService::rollback($id);
             return response()->json(['success' => true, 'message' => 'Procedure rolled back successfully.']);
@@ -161,7 +163,7 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
                 'exception' => $e
             ]);
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Rollback failed: ' . $e->getMessage()
             ], 500);
         }

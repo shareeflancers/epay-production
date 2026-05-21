@@ -206,6 +206,7 @@ class ApiController extends Controller
             $regionId = $request->input('region_id');
             $classId = $request->input('school_class_id');
             $section = $request->input('section');
+            $fee_fund_category_id = $request->input('fee_fund_category_id');
 
             switch ($type) {
                 case 'institution':
@@ -266,6 +267,9 @@ class ApiController extends Controller
                     }
                     if ($section) {
                         $results->where('active_challans.section', $section);
+                    }
+                    if ($fee_fund_category_id) {
+                        $results->where('active_challans.fee_fund_category_id', $fee_fund_category_id);
                     }
 
                     $data = $this->formatAnalyticsData($results->groupBy('group_id', 'group_name', 'fee_fund_category.category_title')->get());

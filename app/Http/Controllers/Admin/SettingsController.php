@@ -341,19 +341,36 @@ class SettingsController extends Controller
 
                         if ($absoluteLatestHistory && $absoluteLatestHistory->status === 'U') {
                             $latestUnpaidHistory = $absoluteLatestHistory;
-                            $amountArrears = $latestUnpaidHistory->amount_within_dueDate;
+                            $amountArrears = (float) $latestUnpaidHistory->amount_base + (float) $latestUnpaidHistory->amount_arrears;
                         }
 
                         // Capture breakdown of arrears for the snapshot
                         $arrearsDetails = [];
                         if ($latestUnpaidHistory) {
                             $snap = json_decode($latestUnpaidHistory->challan_snapshot, true);
-                            $arrearsDetails[] = [
-                                'challan_no' => $latestUnpaidHistory->challan_no,
-                                'amount'     => $latestUnpaidHistory->amount_within_dueDate,
-                                'breakdown'  => $snap['fee_structures'] ?? [],
-                                'source'     => 'history'
-                            ];
+                            $prevArrearsDetails = $snap['arrears_calculation']['details'] ?? [];
+                            if (!empty($prevArrearsDetails)) {
+                                $arrearsDetails = $prevArrearsDetails;
+                            }
+
+                            $prevBillingMonth = $snap['billing_month'] ?? ($latestUnpaidHistory->due_date ? $latestUnpaidHistory->due_date->format('F Y') : 'Previous Month');
+
+                            $exists = false;
+                            foreach ($arrearsDetails as $detail) {
+                                if ((($detail['challan_no'] ?? '') === $latestUnpaidHistory->challan_no) ||
+                                    (empty($detail['challan_no']) && ($detail['billing_month'] ?? '') === $prevBillingMonth)) {
+                                    $exists = true;
+                                    break;
+                                }
+                            }
+
+                            if (!$exists) {
+                                $arrearsDetails[] = [
+                                    'challan_no'    => $latestUnpaidHistory->challan_no,
+                                    'billing_month' => $prevBillingMonth,
+                                    'amount'        => (float) $latestUnpaidHistory->amount_base,
+                                ];
+                            }
                         }
 
                         // ── Amounts ───────────────────────────────────────────
@@ -516,9 +533,313 @@ class SettingsController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | Challan Update (Search & Edit)
+    | Voucher Generation (Institution Level)
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * The six fee-head keys we aggregate when building institution vouchers.
+     * Each key is matched case-insensitively against fee_head_amounts keys
+     * found in the challan_snapshot of paid student challans.
+     * Pre-Primary heads are kept fully separate.
+     */
+    private const VOUCHER_HEADS = [
+        'RDF',
+        'CDF',
+        'CSF',
+        'Security Fund',
+        'Pre-RDF',
+        'Pre-Security-Fund',
+    ];
+
+    /**
+     * Generate monthly vouchers for each institution that has at least one
+     * paid student challan in ChallanHistory for the current billing month.
+     *
+     * Algorithm:
+     *  1. Discover distinct institution_ids from current-month paid student history.
+     *  2. For each institution, aggregate the six target heads from those snapshots.
+     *     - Skip (don't count / don't show) any head whose aggregated total is 0.
+     *  3. Resolve previous-month arrears from the institution's latest unpaid voucher.
+     *  4. Count student challan stats (total / paid / unpaid) for the institution.
+     *  5. Create or update an ActiveChallan (fee_type = 'voucher') for the institution.
+     */
+    public function generateVouchers()
+    {
+        $now          = Carbon::now();
+        $billingMonth = $now->format('F Y'); // e.g. "May 2026"
+        $dueDate      = $now->copy()->day(27)->format('Y-m-d');
+
+        // Take a rollback-safe snapshot before we touch anything
+        \App\Services\ProcedureService::snapshotGenerateVouchers();
+
+        $generated    = 0;
+        $updated      = 0;
+        $skipped      = 0;
+        $skippedDetails = [];
+
+        DB::beginTransaction();
+        try {
+
+            // ── Step 1: Discover active institutions with paid student history this month ──
+            // We join challan_history → consumers to filter consumer_type = 'student'
+            // and check that the billing_month field encoded in the 'reserved' string
+            // or the snapshot matches the current month.
+            $institutionIds = DB::table('challan_history')
+                ->join('consumers', 'challan_history.consumer_id', '=', 'consumers.id')
+                ->where('consumers.consumer_type', 'student')
+                ->where('challan_history.status', 'P')
+                ->whereNotNull('challan_history.institution_id')
+                // Filter by billing month stored inside the reserved field (same format as fee challans)
+                ->where('challan_history.reserved', 'LIKE', "%{$billingMonth}%")
+                ->distinct()
+                ->pluck('challan_history.institution_id')
+                ->toArray();
+
+            if (empty($institutionIds)) {
+                DB::commit();
+                return response()->json([
+                    'success'   => true,
+                    'message'   => "No paid student challans found in archive for {$billingMonth}. No vouchers generated.",
+                    'generated' => 0,
+                    'updated'   => 0,
+                    'skipped'   => 0,
+                ]);
+            }
+
+            // ── Step 2: For each institution, pull & aggregate paid student snapshots ──
+            foreach ($institutionIds as $institutionId) {
+
+                // Fetch the institution consumer record
+                $institutionConsumer = Consumer::where('consumer_type', 'institution')
+                    ->where('institution_id', $institutionId)
+                    ->where('is_active', true)
+                    ->first();
+
+                if (!$institutionConsumer) {
+                    $skipped++;
+                    $skippedDetails[] = "Institution #{$institutionId}: No active institution consumer found.";
+                    continue;
+                }
+
+                // All paid student challans for this institution this billing month
+                $paidHistories = \App\Models\ChallanHistory::join('consumers', 'challan_history.consumer_id', '=', 'consumers.id')
+                    ->where('consumers.consumer_type', 'student')
+                    ->where('challan_history.institution_id', $institutionId)
+                    ->where('challan_history.status', 'P')
+                    ->where('challan_history.reserved', 'LIKE', "%{$billingMonth}%")
+                    ->whereNotNull('challan_history.challan_snapshot')
+                    ->select('challan_history.*')
+                    ->get();
+
+                // ── Aggregate the six target heads across all paid student snapshots ──
+                $headTotals = []; // Only populated for heads with a non-zero total
+
+                foreach ($paidHistories as $history) {
+                    $snap = json_decode($history->challan_snapshot, true);
+                    $feeStructures = $snap['fee_structures'] ?? [];
+
+                    foreach ($feeStructures as $structure) {
+                        $headAmounts = $structure['fee_head_amounts'] ?? [];
+
+                        foreach (self::VOUCHER_HEADS as $targetHead) {
+                            if (isset($headAmounts[$targetHead]) && $headAmounts[$targetHead] > 0) {
+                                $headTotals[$targetHead] = ($headTotals[$targetHead] ?? 0) + $headAmounts[$targetHead];
+                            }
+                        }
+                    }
+                }
+
+                // Amount base = sum of all non-zero aggregated heads
+                $amountBase = array_sum($headTotals);
+
+                // Count student challan stats for this institution & billing month
+                $statsQuery = \App\Models\ChallanHistory::join('consumers', 'challan_history.consumer_id', '=', 'consumers.id')
+                    ->where('consumers.consumer_type', 'student')
+                    ->where('challan_history.institution_id', $institutionId)
+                    ->where('challan_history.reserved', 'LIKE', "%{$billingMonth}%");
+
+                $totalStudentChallans  = (clone $statsQuery)->count();
+                $paidStudentChallans   = (clone $statsQuery)->where('challan_history.status', 'P')->count();
+                $unpaidStudentChallans = (clone $statsQuery)->where('challan_history.status', 'U')->count();
+
+                // ── Step 3: Resolve arrears, breakdown, and stats from the institution's latest previous voucher ──
+                $latestVoucher = \App\Models\ActiveChallan::where('consumer_id', $institutionConsumer->id)
+                    ->whereIn('fee_type', ['voucher', 'sis_voucher', 'induction_fee'])
+                    ->where('status', 'U') // Usually unpaid if it is an arrears voucher
+                    ->orderBy('due_date', 'desc')
+                    ->first() ?: \App\Models\ChallanHistory::where('consumer_id', $institutionConsumer->id)
+                    ->whereIn('fee_type', ['voucher', 'sis_voucher', 'induction_fee'])
+                    ->orderBy('due_date', 'desc')
+                    ->first();
+
+                // If that was not found, try to find any latest voucher in history regardless of paid/unpaid status
+                if (!$latestVoucher) {
+                    $latestVoucher = \App\Models\ChallanHistory::where('consumer_id', $institutionConsumer->id)
+                        ->whereIn('fee_type', ['voucher', 'sis_voucher', 'induction_fee'])
+                        ->orderBy('due_date', 'desc')
+                        ->first();
+                }
+
+                $amountArrears      = 0;
+                $arrearsDetails     = [];
+                $previousVoucherBreakdown = [];
+                $previousVoucherStats = [];
+                $previousVoucherBillingMonth = null;
+
+                if ($latestVoucher) {
+                    $prevSnap = json_decode($latestVoucher->challan_snapshot, true);
+                    if ($prevSnap) {
+                        $previousVoucherBreakdown = $prevSnap['aggregated_heads'] ?? [];
+                        $previousVoucherStats = $prevSnap['student_challan_stats'] ?? [];
+                        $previousVoucherBillingMonth = $prevSnap['billing_month'] ?? null;
+                    }
+
+                    if ($latestVoucher->status === 'U') {
+                        $amountArrears  = (float) $latestVoucher->amount_base + (float) $latestVoucher->amount_arrears;
+
+                        $prevArrearsDetails = $prevSnap['arrears_calculation']['details'] ?? [];
+                        if (!empty($prevArrearsDetails)) {
+                            $arrearsDetails = $prevArrearsDetails;
+                        }
+
+                        $prevBillingMonth = $previousVoucherBillingMonth ?? ($latestVoucher->due_date ? $latestVoucher->due_date->format('F Y') : 'Previous Month');
+
+                        $exists = false;
+                        foreach ($arrearsDetails as $detail) {
+                            if ((($detail['challan_no'] ?? '') === $latestVoucher->challan_no) ||
+                                (empty($detail['challan_no']) && ($detail['billing_month'] ?? '') === $prevBillingMonth)) {
+                                $exists = true;
+                                break;
+                            }
+                        }
+
+                        if (!$exists) {
+                            $arrearsDetails[] = [
+                                'challan_no'    => $latestVoucher->challan_no,
+                                'billing_month' => $prevBillingMonth,
+                                'amount'        => (float) $latestVoucher->amount_base,
+                            ];
+                        }
+                    }
+                }
+
+                $totalAmount = $amountBase + $amountArrears;
+
+                // ── Step 4: Build the institution record from its consumer ──
+                $institution = \App\Models\Institution::find($institutionId);
+
+                // ── Step 5: Build the voucher snapshot ──
+                $snapshot = [
+                    'generated_at'  => $now->toIso8601String(),
+                    'billing_month' => $billingMonth,
+                    'voucher_type'  => 'institution_fund_collection',
+                    'arrears_calculation' => [
+                        'amount_arrears' => $amountArrears,
+                        'details'        => $arrearsDetails,
+                    ],
+                    'consumer' => [
+                        'id'              => $institutionConsumer->id,
+                        'consumer_number' => $institutionConsumer->consumer_number,
+                        'consumer_type'   => $institutionConsumer->consumer_type,
+                        'institution_id'  => $institutionId,
+                        'region_id'       => $institutionConsumer->region_id,
+                    ],
+                    'institution' => $institution ? [
+                        'id'     => $institution->id,
+                        'name'   => $institution->name,
+                    ] : null,
+                    // Only the heads that actually have a non-zero aggregated value
+                    'aggregated_heads' => $headTotals,
+                    'amount_base'      => $amountBase,
+                    'student_challan_stats' => [
+                        'billing_month' => $billingMonth,
+                        'total'         => $totalStudentChallans,
+                        'paid'          => $paidStudentChallans,
+                        'unpaid'        => $unpaidStudentChallans,
+                    ],
+                    // Store the previous voucher details, its breakdown, and its stats
+                    'previous_voucher_details' => $latestVoucher ? [
+                        'challan_no'            => $latestVoucher->challan_no,
+                        'billing_month'         => $previousVoucherBillingMonth,
+                        'status'                => $latestVoucher->status,
+                        'amount'                => $latestVoucher->amount_within_dueDate,
+                        'aggregated_heads'      => $previousVoucherBreakdown,
+                        'student_challan_stats' => $previousVoucherStats,
+                    ] : null,
+                ];
+
+                // ── Reserved string ──
+                $reserved = "Institution Voucher | {$billingMonth} | "
+                    . "Consumer: {$institutionConsumer->consumer_number} | "
+                    . "Institution: {$institution?->name} | "
+                    . "Base: {$amountBase} | "
+                    . "Arrears: {$amountArrears} | "
+                    . "Due Date: {$dueDate}";
+
+                // ── Discover or preserve existing custom fee type ──
+                $feeType = 'voucher';
+                $existingVoucher = ActiveChallan::where('consumer_id', $institutionConsumer->id)
+                    ->whereIn('fee_type', ['voucher', 'sis_voucher', 'induction_fee'])
+                    ->first();
+                if ($existingVoucher) {
+                    $feeType = $existingVoucher->fee_type;
+                }
+
+                $challanData = [
+                    'due_date'              => $dueDate,
+                    'amount_base'           => $amountBase,
+                    'amount_arrears'        => $amountArrears,
+                    'amount_within_dueDate' => $totalAmount,
+                    'amount_after_dueDate'  => $totalAmount,
+                    'fee_type'              => $feeType,
+                    'reserved'              => $reserved,
+                    'institution_id'        => $institutionId,
+                    'region_id'             => $institutionConsumer->region_id,
+                    'challan_snapshot'      => json_encode($snapshot),
+                    'is_active'             => true,
+                ];
+
+                if ($existingVoucher) {
+                    $existingVoucher->update($challanData);
+                    $updated++;
+                } else {
+                    $challanNo = $this->generateUniqueChallanNo();
+                    ActiveChallan::create(array_merge($challanData, [
+                        'consumer_id'  => $institutionConsumer->id,
+                        'challan_no'   => $challanNo,
+                        'status'       => 'U',
+                        'tran_auth_id' => 'J8NTDA',
+                    ]));
+                    $generated++;
+                }
+            }
+
+            DB::commit();
+
+            Log::info("Voucher Generation: {$generated} generated, {$updated} updated, {$skipped} skipped for {$billingMonth}.");
+
+            $message = "{$generated} vouchers generated, {$updated} updated, {$skipped} skipped for {$billingMonth}.";
+
+            return response()->json([
+                'success'         => true,
+                'message'         => $message,
+                'generated'       => $generated,
+                'updated'         => $updated,
+                'skipped'         => $skipped,
+                'skipped_details' => array_slice($skippedDetails, 0, 50),
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Voucher Generation failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Voucher generation failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 
     /**
      * Display the challan update page.

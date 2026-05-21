@@ -81,6 +81,18 @@ class ProcedureService
     }
 
     /**
+     * Create a snapshot before Step 5 (Generate Vouchers)
+     */
+    public static function snapshotGenerateVouchers()
+    {
+        return ProcedureSnapshot::create([
+            'step_name'     => 'generate_vouchers',
+            'snapshot_data' => ['timestamp' => now()->toDateTimeString()],
+            'batch_id'      => 'batch_' . time(),
+        ]);
+    }
+
+    /**
      * Rollback a specific snapshot
      */
     public static function rollback($snapshotId)
@@ -106,6 +118,9 @@ class ProcedureService
                     break;
                 case 'generate':
                     self::rollbackGenerate($snapshot);
+                    break;
+                case 'generate_vouchers':
+                    self::rollbackGenerateVouchers($snapshot);
                     break;
             }
 
@@ -173,5 +188,14 @@ class ProcedureService
         $timestamp = $snapshot->snapshot_data['timestamp'];
         // Delete challans created in this generation batch
         ActiveChallan::where('created_at', '>=', $timestamp)->delete();
+    }
+
+    private static function rollbackGenerateVouchers($snapshot)
+    {
+        $timestamp = $snapshot->snapshot_data['timestamp'];
+        // Delete only voucher-type challans created in this batch
+        ActiveChallan::whereIn('fee_type', ['voucher', 'sis_voucher', 'induction_fee'])
+                     ->where('created_at', '>=', $timestamp)
+                     ->delete();
     }
 }

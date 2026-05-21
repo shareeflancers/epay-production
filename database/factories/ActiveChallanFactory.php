@@ -37,7 +37,7 @@ class ActiveChallanFactory extends Factory
             'amount_within_dueDate' => $amountWithinDueDate,
             'amount_after_dueDate' => $amountAfterDueDate,
             'date_paid' => fake()->optional(0.3)->dateTimeBetween('-1 month', 'now'),
-            'fee_type' => fake()->randomElement(['fee', 'voucher']),
+            'fee_type' => fake()->randomElement(['fee', 'voucher', 'sis_voucher', 'induction_fee']),
             'reserved' => fake()->optional(0.2)->text(200),
             'is_active' => fake()->boolean(90),
         ];
