@@ -294,6 +294,10 @@ class ApiController extends Controller
                         $results->where('active_challans.section', $section);
                     }
 
+                    if ($fee_fund_category_id) {
+                        $results->where('active_challans.fee_fund_category_id', $fee_fund_category_id);
+                    }
+
                     $data = $this->formatAnalyticsData($results->groupBy('group_id', 'group_name', 'fee_fund_category.category_title')->get(), $filters, 'class_section');
                     break;
 

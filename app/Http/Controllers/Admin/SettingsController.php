@@ -239,14 +239,14 @@ class SettingsController extends Controller
         \App\Services\ProcedureService::snapshotGenerate();
 
         $generated = 0;
-        $updated   = 0;
         $skipped   = 0;
         $skipReasons = [
-            'no_profile'       => 0,
-            'no_categories'    => 0,
-            'no_institution'   => 0,
-            'no_year_session'  => 0,
-            'no_fee_structure' => 0,
+            'already_has_challan' => 0,
+            'no_profile'          => 0,
+            'no_categories'       => 0,
+            'no_institution'      => 0,
+            'no_year_session'     => 0,
+            'no_fee_structure'    => 0,
         ];
         $skippedDetails = [];
 
@@ -261,13 +261,26 @@ class SettingsController extends Controller
                 ])
                 ->chunk(100, function ($consumers) use (
                     $dueDate, $billingMonth, $now,
-                    &$generated, &$updated, &$skipped, &$skipReasons, &$skippedDetails
+                    &$generated, &$skipped, &$skipReasons, &$skippedDetails
                 ) {
+                    // Pre-fetch any existing active challans keyed by consumer_id.
+                    // A consumer with an existing challan will be skipped — bulk generation
+                    // never updates; updates must be done individually.
                     $existingChallans = ActiveChallan::whereIn('consumer_id', $consumers->pluck('id'))
                         ->get()
                         ->keyBy('consumer_id');
 
                     foreach ($consumers as $consumer) {
+                        // ── Guard: no duplicate challan ───────────────────────
+                        // There can only be one active challan per consumer at a time.
+                        // If one already exists, skip — do NOT overwrite it.
+                        if ($existingChallans->has($consumer->id)) {
+                            $skipped++;
+                            $skipReasons['already_has_challan']++;
+                            $skippedDetails[] = "Consumer #{$consumer->id} ({$consumer->consumer_number}): Already has an active challan";
+                            continue;
+                        }
+
                         $profile = $consumer->profileDetails->first();
 
                         // ── Guard: active profile ─────────────────────────────
@@ -479,42 +492,35 @@ class SettingsController extends Controller
                             'is_active'             => true,
                         ];
 
-                        $activeChallan = $existingChallans->get($consumer->id);
-
-                        if ($activeChallan) {
-                            $activeChallan->update($challanData);
-                            $updated++;
-                        } else {
-                            $challanNo = $this->generateUniqueChallanNo();
-                            ActiveChallan::create(array_merge($challanData, [
-                                'consumer_id'  => $consumer->id,
-                                'challan_no'   => $challanNo,
-                                'status'       => 'U',
-                                'tran_auth_id' => 'J8NTDA',
-                            ]));
-                            $generated++;
-                        }
+                        // Consumer passed all guards — create the new challan.
+                        $challanNo = $this->generateUniqueChallanNo();
+                        ActiveChallan::create(array_merge($challanData, [
+                            'consumer_id'  => $consumer->id,
+                            'challan_no'   => $challanNo,
+                            'status'       => 'U',
+                            'tran_auth_id' => 'J8NTDA',
+                        ]));
+                        $generated++;
                     }
                 });
 
             DB::commit();
 
-            Log::info("Bulk Challan Generation: {$generated} generated, {$updated} updated, {$skipped} skipped for {$billingMonth}.");
+            Log::info("Bulk Challan Generation: {$generated} generated, {$skipped} skipped for {$billingMonth}.");
 
             // ── Response message ──────────────────────────────────────────────
-            if ($generated === 0 && $updated === 0 && $skipped === 0) {
+            if ($generated === 0 && $skipped === 0) {
                 $message = "No active consumers found for {$billingMonth}.";
-            } elseif ($generated === 0 && $updated === 0) {
-                $message = "No challans generated — {$skipped} consumers skipped for {$billingMonth}.";
+            } elseif ($generated === 0) {
+                $message = "No new challans generated — {$skipped} consumers skipped for {$billingMonth}.";
             } else {
-                $message = "{$generated} challans generated, {$updated} updated, {$skipped} skipped for {$billingMonth}.";
+                $message = "{$generated} challans generated, {$skipped} skipped for {$billingMonth}.";
             }
 
             return response()->json([
                 'success'         => true,
                 'message'         => $message,
                 'generated'       => $generated,
-                'updated'         => $updated,
                 'skipped'         => $skipped,
                 'skip_reasons'    => $skipReasons,
                 'skipped_details' => array_slice($skippedDetails, 0, 50),
