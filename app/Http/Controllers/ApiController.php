@@ -224,6 +224,7 @@ class ApiController extends Controller
                         ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
                             'institutions.id as group_id',
+                            'institutions.id as institution_id',
                             'institutions.name as group_name',
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
@@ -250,6 +251,7 @@ class ApiController extends Controller
                         ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
                             'regions.id as group_id',
+                            'regions.id as region_id',
                             'regions.name as group_name',
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
@@ -277,6 +279,9 @@ class ApiController extends Controller
                         ->select([
                             DB::raw('CONCAT(active_challans.institution_id, "-", active_challans.school_class_id, "-", active_challans.section) as group_id'),
                             DB::raw('CONCAT(school_classes.name, " - ", active_challans.section) as group_name'),
+                            'active_challans.institution_id',
+                            'active_challans.school_class_id',
+                            'active_challans.section',
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
@@ -298,7 +303,13 @@ class ApiController extends Controller
                         $results->where('active_challans.fee_fund_category_id', $fee_fund_category_id);
                     }
 
-                    $data = $this->formatAnalyticsData($results->groupBy('group_id', 'group_name', 'fee_fund_category.category_title')->get(), $filters, 'class_section');
+                    $data = $this->formatAnalyticsData($results->groupBy(
+                        'active_challans.institution_id',
+                        'active_challans.school_class_id',
+                        'active_challans.section',
+                        'school_classes.name',
+                        'fee_fund_category.category_title'
+                    )->get(), $filters, 'class_section');
                     break;
 
                 case 'institution_category':
@@ -309,6 +320,8 @@ class ApiController extends Controller
                         ->leftJoin('fee_fund_category', 'active_challans.fee_fund_category_id', '=', 'fee_fund_category.id')
                         ->select([
                             DB::raw('CONCAT(active_challans.institution_id, "-", active_challans.school_class_id, "-", active_challans.section) as group_id'),
+                            'active_challans.institution_id',
+                            'active_challans.school_class_id',
                             'school_classes.name as class_name',
                             'institutions.name as group_name',
                             'active_challans.section',
@@ -430,6 +443,17 @@ class ApiController extends Controller
 
                 if (!$isGroupNameRedundant) {
                     $formatted[$groupId]['group_name'] = $row->group_name;
+                }
+
+                if (isset($row->institution_id)) {
+                    $formatted[$groupId]['institution_id'] = (int) $row->institution_id;
+                }
+                if (isset($row->region_id)) {
+                    $formatted[$groupId]['region_id'] = (int) $row->region_id;
+                }
+                if (isset($row->school_class_id)) {
+                    $formatted[$groupId]['school_class_id'] = (int) $row->school_class_id;
+                    $formatted[$groupId]['class_id'] = (int) $row->school_class_id;
                 }
 
                 $formatted[$groupId]['total_paid'] = [
