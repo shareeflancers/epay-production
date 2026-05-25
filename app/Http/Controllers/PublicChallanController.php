@@ -92,7 +92,7 @@ class PublicChallanController extends Controller
         $profile = $challan->consumer->profileDetails->first();
 
         // Generate QR Code as SVG pointing to verification URL
-        $qrCode = QrCode::size(100)->generate(route('challan.verify', ['consumer_number' => $challan->consumer->consumer_number]));
+        $qrCode = QrCode::size(100)->generate(route('challan.verify', ['challan_no' => $challan->challan_no]));
 
         // For voucher-type challans, resolve principal name and CNIC from the institution consumer profile
         $principalProfile = null;
