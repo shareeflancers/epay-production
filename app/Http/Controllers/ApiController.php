@@ -228,8 +228,8 @@ class ApiController extends Controller
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
-                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then consumers.sis_student_id end) as paid_student_ids'),
-                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then consumers.sis_student_id end) as unpaid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then CAST(consumers.sis_student_id AS CHAR) end) as paid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then CAST(consumers.sis_student_id AS CHAR) end) as unpaid_student_ids'),
                         ]);
 
                     if ($institutionId) {
@@ -254,8 +254,8 @@ class ApiController extends Controller
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
-                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then consumers.sis_student_id end) as paid_student_ids'),
-                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then consumers.sis_student_id end) as unpaid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then CAST(consumers.sis_student_id AS CHAR) end) as paid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then CAST(consumers.sis_student_id AS CHAR) end) as unpaid_student_ids'),
                         ]);
 
                     if ($regionId) {
@@ -280,8 +280,8 @@ class ApiController extends Controller
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
-                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then consumers.sis_student_id end) as paid_student_ids'),
-                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then consumers.sis_student_id end) as unpaid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then CAST(consumers.sis_student_id AS CHAR) end) as paid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then CAST(consumers.sis_student_id AS CHAR) end) as unpaid_student_ids'),
                         ]);
 
                     if ($institutionId) {
@@ -315,8 +315,8 @@ class ApiController extends Controller
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
-                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then consumers.sis_student_id end) as paid_student_ids'),
-                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then consumers.sis_student_id end) as unpaid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then CAST(consumers.sis_student_id AS CHAR) end) as paid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then CAST(consumers.sis_student_id AS CHAR) end) as unpaid_student_ids'),
                         ]);
 
                     if ($institutionId) {
@@ -345,8 +345,8 @@ class ApiController extends Controller
                             'fee_fund_category.category_title',
                             DB::raw('count(case when active_challans.status = "P" then 1 end) as paid_count'),
                             DB::raw('count(case when active_challans.status = "U" then 1 end) as unpaid_count'),
-                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then consumers.sis_student_id end) as paid_student_ids'),
-                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then consumers.sis_student_id end) as unpaid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "P" then CAST(consumers.sis_student_id AS CHAR) end) as paid_student_ids'),
+                            DB::raw('GROUP_CONCAT(case when active_challans.status = "U" then CAST(consumers.sis_student_id AS CHAR) end) as unpaid_student_ids'),
                         ])
                         ->groupBy('fee_fund_category.category_title')
                         ->get();
