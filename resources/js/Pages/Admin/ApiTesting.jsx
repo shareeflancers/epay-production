@@ -277,6 +277,12 @@ export default function ApiTesting() {
                                                     value={analyticsFilters.section}
                                                     onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, section: e.target.value })}
                                                 />
+                                                <TextInput
+                                                    label="Category ID"
+                                                    placeholder="e.g. 2"
+                                                    value={analyticsFilters.fee_fund_category_id}
+                                                    onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, fee_fund_category_id: e.target.value })}
+                                                />
                                             </>
                                         )}
 
@@ -301,6 +307,7 @@ export default function ApiTesting() {
                                                 if (analyticsFilters.institution_id) params.institution_id = analyticsFilters.institution_id;
                                                 if (analyticsFilters.school_class_id) params.school_class_id = analyticsFilters.school_class_id;
                                                 if (analyticsFilters.section) params.section = analyticsFilters.section;
+                                                if (analyticsFilters.fee_fund_category_id) params.fee_fund_category_id = analyticsFilters.fee_fund_category_id;
                                             } else if (analyticsType === 'institution_category') {
                                                 if (analyticsFilters.institution_id) params.institution_id = analyticsFilters.institution_id;
                                                 if (analyticsFilters.fee_fund_category_id) params.fee_fund_category_id = analyticsFilters.fee_fund_category_id;
