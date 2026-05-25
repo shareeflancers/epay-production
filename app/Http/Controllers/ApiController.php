@@ -236,6 +236,10 @@ class ApiController extends Controller
                         $results->where('active_challans.institution_id', $institutionId);
                     }
 
+                    if ($fee_fund_category_id) {
+                        $results->where('active_challans.fee_fund_category_id', $fee_fund_category_id);
+                    }
+
                     $data = $this->formatAnalyticsData($results->groupBy('institutions.id', 'institutions.name', 'fee_fund_category.category_title')->get(), $filters, 'institution');
                     break;
 
@@ -256,6 +260,10 @@ class ApiController extends Controller
 
                     if ($regionId) {
                         $results->where('active_challans.region_id', $regionId);
+                    }
+
+                    if ($fee_fund_category_id) {
+                        $results->where('active_challans.fee_fund_category_id', $fee_fund_category_id);
                     }
 
                     $data = $this->formatAnalyticsData($results->groupBy('regions.id', 'regions.name', 'fee_fund_category.category_title')->get(), $filters, 'region');
