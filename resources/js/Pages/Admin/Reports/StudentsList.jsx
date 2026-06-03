@@ -34,7 +34,7 @@ export default function StudentsList({ challans, filters, institution, schoolCla
         <Anchor href={item.href} key={index} onClick={(e) => {
             if (item.href !== '#') {
                 e.preventDefault();
-                router.get(item.href);
+                router.get(item.href, filters);
             }
         }}>
             {item.title}

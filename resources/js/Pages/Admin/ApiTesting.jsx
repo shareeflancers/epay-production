@@ -17,7 +17,8 @@ import {
     Tabs,
     Box,
     JsonInput,
-    Select
+    Select,
+    Checkbox
 } from '@mantine/core';
 import { AdminLayout } from '@/Components/Layout';
 import { useTheme } from '@/theme';
@@ -46,7 +47,11 @@ export default function ApiTesting() {
         region_id: '',
         school_class_id: '',
         section: '',
-        fee_fund_category_id: ''
+        fee_fund_category_id: '',
+        month: '',
+        year: '',
+        year_session: '',
+        detailed: false
     });
 
     const callApi = async (method, endpoint, params = null, body = null) => {
@@ -277,23 +282,43 @@ export default function ApiTesting() {
                                                     value={analyticsFilters.section}
                                                     onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, section: e.target.value })}
                                                 />
-                                                <TextInput
-                                                    label="Category ID"
-                                                    placeholder="e.g. 2"
-                                                    value={analyticsFilters.fee_fund_category_id}
-                                                    onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, fee_fund_category_id: e.target.value })}
-                                                />
                                             </>
                                         )}
 
-                                        {analyticsType === 'institution_category' && (
-                                            <TextInput
-                                                label="Fee Fund Category ID"
-                                                placeholder="e.g. 2"
-                                                value={analyticsFilters.fee_fund_category_id}
-                                                onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, fee_fund_category_id: e.target.value })}
-                                            />
-                                        )}
+                                        <TextInput
+                                            label="Fee Fund Category ID"
+                                            placeholder="e.g. 2"
+                                            value={analyticsFilters.fee_fund_category_id}
+                                            onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, fee_fund_category_id: e.target.value })}
+                                        />
+                                        <TextInput
+                                            label="Month"
+                                            placeholder="e.g. 5"
+                                            value={analyticsFilters.month}
+                                            onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, month: e.target.value })}
+                                        />
+                                        <TextInput
+                                            label="Year Filter"
+                                            placeholder="e.g. 2026"
+                                            value={analyticsFilters.year}
+                                            onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, year: e.target.value })}
+                                        />
+                                        <TextInput
+                                            label="Session Year Filter"
+                                            placeholder="e.g. 2026-27"
+                                            value={analyticsFilters.year_session}
+                                            onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, year_session: e.target.value })}
+                                        />
+                                        <Select
+                                            label="Detailed Mode"
+                                            placeholder="Standard"
+                                            value={analyticsFilters.detailed ? '1' : '0'}
+                                            onChange={(val) => setAnalyticsFilters({ ...analyticsFilters, detailed: val === '1' })}
+                                            data={[
+                                                { value: '0', label: 'Standard Summary' },
+                                                { value: '1', label: 'Detailed Fundheads' },
+                                            ]}
+                                        />
                                     </Group>
 
                                     <Button
@@ -312,6 +337,12 @@ export default function ApiTesting() {
                                                 if (analyticsFilters.institution_id) params.institution_id = analyticsFilters.institution_id;
                                                 if (analyticsFilters.fee_fund_category_id) params.fee_fund_category_id = analyticsFilters.fee_fund_category_id;
                                             }
+
+                                            if (analyticsFilters.month) params.month = analyticsFilters.month;
+                                            if (analyticsFilters.year) params.year = analyticsFilters.year;
+                                            if (analyticsFilters.year_session) params.year_session = analyticsFilters.year_session;
+                                            if (analyticsFilters.detailed) params.detailed = 1;
+
                                             callApi('get', '/challans/analytics', params);
                                         }}
                                         loading={loading}

@@ -81,7 +81,10 @@ class UtilitiesController extends Controller
                         'inserted' => 0,
                         'updated' => 0,
                         'unchanged' => 0,
+                        'skipped' => 0,
                     ];
+
+                    $processedBforms = [];
 
                     $validCategoryIds = FeeFundCategory::pluck('id')->toArray();
 
@@ -151,14 +154,39 @@ class UtilitiesController extends Controller
                         }
                         $classId = $classesMap[$className];
 
+                        // Check for duplicate B-form (CNIC) or sis_student_id to satisfy strict unique constraints
+                        if (in_array($validated['std_form_b'], $processedBforms)) {
+                            $stats['skipped']++;
+                            continue;
+                        }
+
+                        $duplicateCnicExists = Consumer::where('identification_number', $validated['std_form_b'])
+                            ->where('consumer_type', 'student')
+                            ->where('consumer_number', '!=', $validated['consumer_number'])
+                            ->exists();
+
+                        $duplicateStudentIdExists = Consumer::where('sis_student_id', $validated['s_id'])
+                            ->where('consumer_type', 'student')
+                            ->where('consumer_number', '!=', $validated['consumer_number'])
+                            ->exists();
+
+                        if ($duplicateCnicExists || $duplicateStudentIdExists) {
+                            $stats['skipped']++;
+                            continue;
+                        }
+
+                        $processedBforms[] = $validated['std_form_b'];
+
                         // 1. Process Consumer
-                        $consumerKeys = ['identification_number' => $validated['std_form_b']];
-                        $consumerData = [
-                            'consumer_type' => 'student',
+                        $consumerKeys = [
                             'consumer_number' => $validated['consumer_number'],
+                            'consumer_type'  => 'student',
+                        ];
+                        $consumerData = [
+                            'identification_number' => $validated['std_form_b'],
+                            'sis_student_id' => $validated['s_id'],
                             'institution_id' => $validated['s_school_idFk'],
                             'region_id' => $validated['s_region_idFk'],
-                            'sis_student_id' => $validated['s_id'],
                             'is_active' => 1,
                         ];
 
@@ -252,11 +280,13 @@ class UtilitiesController extends Controller
                         );
 
                         // 2. Process Consumer
-                        $consumerKeys = ['identification_number' => $identificationNumber];
-                        $consumerData = [
-                            'consumer_type' => 'institution',
-                            'consumer_number' => $consumerNumber,
+                        $consumerKeys = [
                             'institution_id' => $validated['s_school_idFk'],
+                            'consumer_type'  => 'institution',
+                        ];
+                        $consumerData = [
+                            'identification_number' => $identificationNumber,
+                            'consumer_number' => $consumerNumber,
                             'region_id' => $validated['s_region_idFk'],
                             'is_active' => 1,
                         ];

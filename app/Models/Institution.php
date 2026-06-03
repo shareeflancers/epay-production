@@ -38,4 +38,9 @@ class Institution extends Model
     {
         return $this->hasMany(ActiveChallan::class, 'institution_id');
     }
+
+    public function challanHistories(): HasMany
+    {
+        return $this->hasMany(ChallanHistory::class, 'institution_id');
+    }
 }

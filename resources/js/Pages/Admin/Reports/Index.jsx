@@ -11,6 +11,7 @@ import {
     Select,
     Button,
     Anchor,
+    SimpleGrid,
 } from '@mantine/core';
 import { router } from '@inertiajs/react';
 import { AdminLayout } from '../../../Components/Layout';
@@ -23,17 +24,46 @@ export default function AnalyticalReport({ institutions, filterOptions, filters,
     const [search, setSearch] = useState('');
 
     // Filter state
-    const [institutionId, setInstitutionId] = useState(filters.institution_id || null);
-    const [classId, setClassId] = useState(filters.school_class_id || null);
+    const [institutionId, setInstitutionId] = useState(filters.institution_id ? filters.institution_id.toString() : null);
+    const [classId, setClassId] = useState(filters.school_class_id ? filters.school_class_id.toString() : null);
     const [section, setSection] = useState(filters.section || '');
-    const [feeFundCategoryId, setFeeFundCategoryId] = useState(filters.fee_fund_category_id || null);
+    const [feeFundCategoryId, setFeeFundCategoryId] = useState(filters.fee_fund_category_id ? filters.fee_fund_category_id.toString() : null);
+    const [month, setMonth] = useState(filters.month ? filters.month.toString() : null);
+    const [year, setYear] = useState(filters.year ? filters.year.toString() : null);
+    const [yearSession, setYearSession] = useState(filters.year_session || null);
+
+    const months = [
+        { value: '1', label: 'January' },
+        { value: '2', label: 'February' },
+        { value: '3', label: 'March' },
+        { value: '4', label: 'April' },
+        { value: '5', label: 'May' },
+        { value: '6', label: 'June' },
+        { value: '7', label: 'July' },
+        { value: '8', label: 'August' },
+        { value: '9', label: 'September' },
+        { value: '10', label: 'October' },
+        { value: '11', label: 'November' },
+        { value: '12', label: 'December' },
+    ];
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 7 }, (_, i) => {
+        const yearVal = (currentYear - 4 + i).toString();
+        return { value: yearVal, label: yearVal };
+    });
+
+    const yearSessions = filterOptions.yearSessions ? filterOptions.yearSessions.map(ys => ({ value: ys.id.toString(), label: ys.label })) : [];
 
     const handleFilter = () => {
         router.get('/admin/reports/analytical', {
             institution_id: institutionId,
             school_class_id: classId,
             section: section,
-            fee_fund_category_id: feeFundCategoryId
+            fee_fund_category_id: feeFundCategoryId,
+            month: month,
+            year: year,
+            year_session: yearSession
         }, {
             preserveState: true,
             replace: true
@@ -45,6 +75,9 @@ export default function AnalyticalReport({ institutions, filterOptions, filters,
         setClassId(null);
         setSection('');
         setFeeFundCategoryId(null);
+        setMonth(null);
+        setYear(null);
+        setYearSession(null);
         router.get('/admin/reports/analytical');
     };
 
@@ -139,7 +172,7 @@ export default function AnalyticalReport({ institutions, filterOptions, filters,
                 {/* Filter Area */}
                 <Card shadow="sm" radius="md" padding="lg" style={{ background: ui.cardBg, border: `1px solid ${ui.border}` }}>
                     <Stack gap="md">
-                        <Group align="flex-end">
+                        <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing="md">
                             <Select
                                 label="School / Institution"
                                 placeholder="Select School"
@@ -148,7 +181,6 @@ export default function AnalyticalReport({ institutions, filterOptions, filters,
                                 onChange={setInstitutionId}
                                 clearable
                                 searchable
-                                style={{ flex: 1 }}
                             />
                             <Select
                                 label="Class"
@@ -158,7 +190,6 @@ export default function AnalyticalReport({ institutions, filterOptions, filters,
                                 onChange={setClassId}
                                 clearable
                                 searchable
-                                style={{ flex: 1 }}
                             />
                             <Select
                                 label="Fee Fund Category"
@@ -168,15 +199,42 @@ export default function AnalyticalReport({ institutions, filterOptions, filters,
                                 onChange={setFeeFundCategoryId}
                                 clearable
                                 searchable
-                                style={{ flex: 1 }}
                             />
                             <TextInput
                                 label="Section"
                                 placeholder="e.g. A, B, Blue"
                                 value={section}
                                 onChange={(e) => setSection(e.currentTarget.value)}
-                                style={{ flex: 1 }}
                             />
+                            <Select
+                                label="Month"
+                                placeholder="Select Month"
+                                data={months}
+                                value={month}
+                                onChange={setMonth}
+                                clearable
+                                searchable
+                            />
+                            <Select
+                                label="Year"
+                                placeholder="Select Year"
+                                data={years}
+                                value={year}
+                                onChange={setYear}
+                                clearable
+                                searchable
+                            />
+                            <Select
+                                label="Year Session"
+                                placeholder="Select Session"
+                                data={yearSessions}
+                                value={yearSession}
+                                onChange={setYearSession}
+                                clearable
+                                searchable
+                            />
+                        </SimpleGrid>
+                        <Group justify="flex-end">
                             <Button onClick={handleFilter} color={colorConfig.primary}>Generate Report</Button>
                             <Button variant="subtle" color="gray" onClick={handleReset}>Reset</Button>
                         </Group>

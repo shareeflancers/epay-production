@@ -69,4 +69,19 @@ class ChallanHistory extends Model
     {
         return $this->belongsTo(FeeFundStructure::class, 'fee_fund_structure_id');
     }
+
+    public function consumer()
+    {
+        return $this->belongsTo(Consumer::class, 'consumer_id');
+    }
+
+    public function schoolClass()
+    {
+        return $this->belongsTo(SchoolClass::class, 'school_class_id');
+    }
+
+    public function feeFundCategory()
+    {
+        return $this->belongsTo(FeeFundCategory::class, 'fee_fund_category_id');
+    }
 }

@@ -32,7 +32,7 @@ export default function InstitutionShow({ institution, stats, filters = {} }) {
         <Anchor href={item.href} key={index} onClick={(e) => {
             if (item.href !== '#') {
                 e.preventDefault();
-                router.get(item.href);
+                router.get(item.href, filters);
             }
         }}>
             {item.title}
@@ -88,10 +88,10 @@ export default function InstitutionShow({ institution, stats, filters = {} }) {
 
     const handleClassClick = (stat) => {
         router.get('/admin/reports/analytical/students', {
+            ...filters,
             institution_id: institution.id,
             school_class_id: stat.school_class_id,
             section: stat.section,
-            ...(filters.fee_fund_category_id ? { fee_fund_category_id: filters.fee_fund_category_id } : {})
         });
     };
 
