@@ -94,6 +94,11 @@ export default function ChallanHistory({ activeChallans, archivedChallans, filte
             }
         },
         {
+            key: 'date_paid',
+            label: 'Paid Date',
+            render: (val) => val ? new Date(val).toLocaleDateString() : '-'
+        },
+        {
             key: 'sms_sync',
             label: 'SMS Sync',
             render: (val, row) => {
@@ -135,6 +140,11 @@ export default function ChallanHistory({ activeChallans, archivedChallans, filte
                 const info = statusMap[val] || { label: val, color: 'gray' };
                 return <Badge color={info.color} size="sm">{info.label}</Badge>;
             }
+        },
+        {
+            key: 'date_paid',
+            label: 'Paid Date',
+            render: (val) => val ? new Date(val).toLocaleDateString() : '-'
         },
         {
             key: 'created_at',

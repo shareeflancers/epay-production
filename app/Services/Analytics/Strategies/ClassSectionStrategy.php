@@ -28,7 +28,9 @@ class ClassSectionStrategy extends BaseStandardStrategy
                 $tableName . '.section',
                 'school_classes.name',
                 'fee_fund_category.category_title'
-            )->get();
+            )
+            ->orderBy('school_classes.display_order')
+            ->get();
     }
 
     protected function getType(): string

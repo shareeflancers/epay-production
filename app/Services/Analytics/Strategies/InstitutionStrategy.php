@@ -21,6 +21,7 @@ class InstitutionStrategy extends BaseStandardStrategy
                 DB::raw('GROUP_CONCAT(case when ' . $tableName . '.status = "U" then CAST(consumers.sis_student_id AS CHAR) end) as unpaid_student_ids'),
             ])
             ->groupBy('institutions.id', 'institutions.name', 'fee_fund_category.category_title')
+            ->orderBy('institutions.display_order')
             ->get();
     }
 

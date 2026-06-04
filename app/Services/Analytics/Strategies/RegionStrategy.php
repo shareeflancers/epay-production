@@ -21,6 +21,7 @@ class RegionStrategy extends BaseStandardStrategy
                 DB::raw('GROUP_CONCAT(case when ' . $tableName . '.status = "U" then CAST(consumers.sis_student_id AS CHAR) end) as unpaid_student_ids'),
             ])
             ->groupBy('regions.id', 'regions.name', 'fee_fund_category.category_title')
+            ->orderBy('regions.display_order')
             ->get();
     }
 

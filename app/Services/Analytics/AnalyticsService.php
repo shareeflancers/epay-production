@@ -34,7 +34,7 @@ class AnalyticsService
     {
         $useHistory = $this->shouldQueryHistory($filters);
         $tableName = $useHistory ? 'challan_history' : 'active_challans';
-        
+
         $query = \Illuminate\Support\Facades\DB::table($tableName);
 
         $strategy = $this->resolveStrategy($type, $filters);
