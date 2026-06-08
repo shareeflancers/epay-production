@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Modal, RingProgress, Text, Stack, Box, Center, ThemeIcon, Tooltip } from '@mantine/core';
+import { Modal, RingProgress, Text, Stack, Box, Center, ThemeIcon, Tooltip, Button } from '@mantine/core';
 import { useTheme } from '../../theme';
 
 /**
@@ -87,8 +87,38 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
     const [recordCount, setRecordCount] = useState(null);
     const [syncStats, setSyncStats] = useState(null);
     const [resultMessage, setResultMessage] = useState(null);
+    const [reportData, setReportData] = useState(null);
     const intervalRef = useRef(null);
     const abortRef = useRef(null);
+
+    const handleDownloadReport = useCallback(() => {
+        if (!reportData || reportData.length === 0) return;
+
+        const headers = ['Name', 'B-Form', 'Status', 'Reason'];
+        const csvContent = [
+            headers.join(','),
+            ...reportData.map(row => {
+                // Escape quotes
+                const escapeCSV = (str) => `"${(str || '').toString().replace(/"/g, '""')}"`;
+                return [
+                    escapeCSV(row.name),
+                    escapeCSV(row.bform),
+                    escapeCSV(row.status),
+                    escapeCSV(row.reason)
+                ].join(',');
+            })
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${fetchLabel.replace(/\s+/g, '_')}_Report.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }, [reportData, fetchLabel]);
 
     // Simulated progress animation
     const startProgressSimulation = useCallback(() => {
@@ -146,6 +176,7 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
         setRecordCount(null);
         setSyncStats(null);
         setResultMessage(null);
+        setReportData(null);
 
         const abortController = new AbortController();
         abortRef.current = abortController;
@@ -207,6 +238,9 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
                         setResultMessage(data.message);
                     } else if (data.stats) {
                         setSyncStats(data.stats);
+                        if (data.report && data.report.length > 0) {
+                            setReportData(data.report);
+                        }
                     } else if (data.data && Array.isArray(data.data)) {
                         setRecordCount(data.data.length);
                     }
@@ -469,15 +503,33 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
                             {syncStats && (
                                 <Box>
                                     <Text size="sm" c="dimmed">
-                                        {(syncStats.inserted === 0 && syncStats.updated === 0)
+                                        {(syncStats.inserted === 0 && syncStats.updated === 0 && (!syncStats.skipped || syncStats.skipped === 0))
                                             ? "All data already up to date."
-                                            : `Sync Complete: ${syncStats.inserted} New, ${syncStats.updated} Updated`
+                                            : `Sync Complete: ${syncStats.inserted} New, ${syncStats.updated} Updated${syncStats.skipped ? `, ${syncStats.skipped} Skipped` : ''}`
                                         }
                                     </Text>
                                     {syncStats.unchanged > 0 && (
                                         <Text size="xs" c="dimmed">
                                             ({syncStats.unchanged} records unchanged)
                                         </Text>
+                                    )}
+                                    {reportData && (
+                                        <Button
+                                            variant="light"
+                                            color="blue"
+                                            size="xs"
+                                            mt="sm"
+                                            onClick={handleDownloadReport}
+                                            leftSection={
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                    <polyline points="7 10 12 15 17 10" />
+                                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                                </svg>
+                                            }
+                                        >
+                                            Download Report
+                                        </Button>
                                     )}
                                 </Box>
                             )}

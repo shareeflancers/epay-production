@@ -194,6 +194,8 @@ class ApiController extends Controller
             $month = $request->input('month');
             $year = $request->input('year');
             $yearSession = $request->input('year_session') ?? $request->input('session_year');
+            $fromDate = $request->input('from_date');
+            $toDate = $request->input('to_date');
             $detailed = $request->input('detailed');
 
             $filters = [
@@ -204,6 +206,8 @@ class ApiController extends Controller
                 'section' => $section,
                 'month' => $month,
                 'year' => $year,
+                'from_date' => $fromDate,
+                'to_date' => $toDate,
                 'year_session' => $yearSession,
                 'detailed' => (int) $detailed === 1,
             ];

@@ -83,6 +83,7 @@ class UtilitiesController extends Controller
                         'unchanged' => 0,
                         'skipped' => 0,
                     ];
+                    $report = [];
 
                     $processedBforms = [];
 
@@ -138,6 +139,17 @@ class UtilitiesController extends Controller
                             }
                         }
 
+                        if (empty($feeFundCategoryIds)) {
+                            $stats['skipped']++;
+                            $report[] = [
+                                'name' => $validated['s_name'],
+                                'bform' => $validated['std_form_b'],
+                                'status' => 'Skipped',
+                                'reason' => 'No valid fee category assigned',
+                            ];
+                            continue;
+                        }
+
                         // Map Level
                         $levelName = $validated['educational_level'];
                         if (!isset($levelsMap[$levelName])) {
@@ -157,6 +169,12 @@ class UtilitiesController extends Controller
                         // Check for duplicate B-form (CNIC) or sis_student_id to satisfy strict unique constraints
                         if (in_array($validated['std_form_b'], $processedBforms)) {
                             $stats['skipped']++;
+                            $report[] = [
+                                'name' => $validated['s_name'],
+                                'bform' => $validated['std_form_b'],
+                                'status' => 'Skipped',
+                                'reason' => 'Duplicate B-form in current batch',
+                            ];
                             continue;
                         }
 
@@ -172,6 +190,12 @@ class UtilitiesController extends Controller
 
                         if ($duplicateCnicExists || $duplicateStudentIdExists) {
                             $stats['skipped']++;
+                            $report[] = [
+                                'name' => $validated['s_name'],
+                                'bform' => $validated['std_form_b'],
+                                'status' => 'Skipped',
+                                'reason' => 'Duplicate B-form or Student ID already exists for another consumer',
+                            ];
                             continue;
                         }
 
@@ -210,6 +234,22 @@ class UtilitiesController extends Controller
                         $stats['inserted'] += $resultStats['inserted'];
                         $stats['updated'] += $resultStats['updated'];
                         $stats['unchanged'] += $resultStats['unchanged'];
+
+                        if ($resultStats['inserted']) {
+                            $report[] = [
+                                'name' => $validated['s_name'],
+                                'bform' => $validated['std_form_b'],
+                                'status' => 'Added',
+                                'reason' => 'New student record created',
+                            ];
+                        } elseif ($resultStats['updated']) {
+                            $report[] = [
+                                'name' => $validated['s_name'],
+                                'bform' => $validated['std_form_b'],
+                                'status' => 'Updated',
+                                'reason' => 'Student record updated',
+                            ];
+                        }
                     }
 
                     DB::commit();
@@ -218,7 +258,8 @@ class UtilitiesController extends Controller
                         'success' => true,
                         'message' => 'Data processed successfully',
                         'data' => $decryptedData,
-                        'stats' => $stats
+                        'stats' => $stats,
+                        'report' => $report
                     ]);
                     break;
                 case 'institution':

@@ -50,6 +50,8 @@ export default function ApiTesting() {
         fee_fund_category_id: '',
         month: '',
         year: '',
+        from_date: '',
+        to_date: '',
         year_session: '',
         detailed: false
     });
@@ -304,6 +306,18 @@ export default function ApiTesting() {
                                             onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, year: e.target.value })}
                                         />
                                         <TextInput
+                                            label="From Date"
+                                            placeholder="e.g. 2026-01"
+                                            value={analyticsFilters.from_date}
+                                            onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, from_date: e.target.value })}
+                                        />
+                                        <TextInput
+                                            label="To Date"
+                                            placeholder="e.g. 2026-12"
+                                            value={analyticsFilters.to_date}
+                                            onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, to_date: e.target.value })}
+                                        />
+                                        <TextInput
                                             label="Session Year Filter"
                                             placeholder="e.g. 2026-27"
                                             value={analyticsFilters.year_session}
@@ -340,6 +354,8 @@ export default function ApiTesting() {
 
                                             if (analyticsFilters.month) params.month = analyticsFilters.month;
                                             if (analyticsFilters.year) params.year = analyticsFilters.year;
+                                            if (analyticsFilters.from_date) params.from_date = analyticsFilters.from_date;
+                                            if (analyticsFilters.to_date) params.to_date = analyticsFilters.to_date;
                                             if (analyticsFilters.year_session) params.year_session = analyticsFilters.year_session;
                                             if (analyticsFilters.detailed) params.detailed = 1;
 

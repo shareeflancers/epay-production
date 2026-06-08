@@ -2,7 +2,10 @@
 
 namespace App\Services\Analytics;
 
+use Illuminate\Support\Facades\DB;
 use App\Models\ActiveChallan;
+use App\Models\Region;
+use App\Models\Institution;
 use App\Services\Analytics\Strategies\InstitutionStrategy;
 use App\Services\Analytics\Strategies\RegionStrategy;
 use App\Services\Analytics\Strategies\ClassSectionStrategy;
@@ -35,7 +38,7 @@ class AnalyticsService
         $useHistory = $this->shouldQueryHistory($filters);
         $tableName = $useHistory ? 'challan_history' : 'active_challans';
 
-        $query = \Illuminate\Support\Facades\DB::table($tableName);
+        $query = DB::table($tableName);
 
         $strategy = $this->resolveStrategy($type, $filters);
 
@@ -51,14 +54,14 @@ class AnalyticsService
 
         if (isset($filters['institution_id'])) {
             $payload['institution_id'] = (int) $filters['institution_id'];
-            $institution = \App\Models\Institution::find($filters['institution_id']);
+            $institution = Institution::find($filters['institution_id']);
             if ($institution) {
                 $payload['institution_name'] = $institution->name;
             }
         }
         if (isset($filters['region_id'])) {
             $payload['region_id'] = (int) $filters['region_id'];
-            $region = \App\Models\Region::find($filters['region_id']);
+            $region = Region::find($filters['region_id']);
             if ($region) {
                 $payload['region_name'] = $region->name;
             }
@@ -68,6 +71,10 @@ class AnalyticsService
         }
         if (isset($filters['year'])) {
             $payload['year'] = (int) $filters['year'];
+        }
+        if (isset($filters['from_date']) && isset($filters['to_date'])) {
+            $payload['from_date'] = $filters['from_date'];
+            $payload['to_date'] = $filters['to_date'];
         }
         if (isset($filters['year_session'])) {
             $payload['year_session'] = $filters['year_session'];
@@ -84,7 +91,7 @@ class AnalyticsService
     protected function resolveStrategy(string $type, array $filters)
     {
         if (!empty($filters['detailed'])) {
-            return new DetailedFundheadStrategy($this->feeCategoryService);
+            return new DetailedFundheadStrategy($this->feeCategoryService, $type);
         }
 
         switch ($type) {
@@ -110,6 +117,8 @@ class AnalyticsService
         $fee_fund_category_id = $filters['fee_fund_category_id'] ?? null;
         $month = $filters['month'] ?? null;
         $year = $filters['year'] ?? null;
+        $fromDate = $filters['from_date'] ?? null;
+        $toDate = $filters['to_date'] ?? null;
         $yearSession = $filters['year_session'] ?? null;
 
         $query->leftJoin('fee_fund_category', $tableName . '.fee_fund_category_id', '=', 'fee_fund_category.id')
@@ -132,6 +141,15 @@ class AnalyticsService
         }
         if ($year) {
             $query->whereYear($tableName . '.due_date', $year);
+        }
+        if ($fromDate && $toDate) {
+            try {
+                $start = \Carbon\Carbon::parse($fromDate)->startOfMonth()->format('Y-m-d');
+                $end = \Carbon\Carbon::parse($toDate)->endOfMonth()->format('Y-m-d');
+                $query->whereBetween($tableName . '.due_date', [$start, $end]);
+            } catch (\Exception $e) {
+                // fallback if unparseable
+            }
         }
         if ($yearSession) {
             $query->join('year_sessions', $tableName . '.year_session_id', '=', 'year_sessions.id')

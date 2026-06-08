@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\ActiveChallan;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+
 
 class SmsSyncService
 {
@@ -16,7 +18,8 @@ class SmsSyncService
         return \Illuminate\Support\Facades\DB::transaction(function () use ($challan) {
             try {
                 // LOCK the row for update to prevent other workers from processing it simultaneously
-                $challan = \App\Models\ActiveChallan::where('id', $challan->id)->lockForUpdate()->first();
+                $modelClass = get_class($challan);
+                $challan = $modelClass::where('id', $challan->id)->lockForUpdate()->first();
 
                 if (!$challan) {
                     Log::warning("SmsSync: Challan record not found during sync.");
