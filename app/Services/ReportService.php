@@ -97,6 +97,24 @@ class ReportService
             $query->where('id', $institutionId);
         }
 
+        // Only include institutions that have matching challans (non-zero total)
+        $query->whereHas($relationName, function ($q) use ($classId, $section, $feeFundCategoryId, $month, $year, $yearSession) {
+            if ($classId) $q->where('school_class_id', $classId);
+            if ($feeFundCategoryId) $q->where('fee_fund_category_id', $feeFundCategoryId);
+            if ($month) $q->whereMonth('due_date', $month);
+            if ($year) $q->whereYear('due_date', $year);
+            if ($yearSession) {
+                $q->whereHas('yearSession', function ($sq) use ($yearSession) {
+                    $sq->where('name', $yearSession);
+                });
+            }
+            if ($section) {
+                $q->whereHas('consumer.profileDetails', function ($pq) use ($section) {
+                    $pq->where('section', $section);
+                });
+            }
+        });
+
         // Calculate totals for all matched institutions (before pagination)
         $totalsQuery = clone $query;
         $totals = $totalsQuery->withCount([

@@ -61,13 +61,23 @@ export default function YearSessionIndex({ sessions, classes, institutions, filt
         open();
     };
 
+    // Helper to extract local date strictly as YYYY-MM-DD
+    const formatDateForInput = (val) => {
+        if (!val) return '';
+        const d = new Date(val);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     // Handle edit button click
     const handleEdit = (row) => {
         setEditingSession(row);
         setData({
             name: row.name || '',
-            start_date: row.start_date ? row.start_date.substring(0, 10) : '',
-            end_date:   row.end_date   ? row.end_date.substring(0, 10)   : '',
+            start_date: formatDateForInput(row.start_date),
+            end_date:   formatDateForInput(row.end_date),
             school_class_id: String(row.school_class_id || ''),
             institution_id:  String(row.institution_id  || ''),
             is_active: !!row.is_active,

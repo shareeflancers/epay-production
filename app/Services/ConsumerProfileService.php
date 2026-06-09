@@ -18,7 +18,7 @@ class ConsumerProfileService
      */
     public function syncConsumerAndProfile(array $consumerKeys, array $consumerData, array $profileKeys, array $profileData): array
     {
-        $stats = ['inserted' => 0, 'updated' => 0, 'unchanged' => 0];
+        $stats = ['inserted' => 0, 'updated' => 0, 'unchanged' => 0, 'changes' => []];
 
         $consumer = null;
 
@@ -42,6 +42,7 @@ class ConsumerProfileService
 
         $consumer->fill($consumerData);
         $consumerIsDirty = $consumer->isDirty();
+        $consumerDirtyAttrs = array_keys($consumer->getDirty());
         $cnicWasChanged = $consumer->isDirty('identification_number');
         $consumer->save();
         $consumerWasCreated = $consumer->wasRecentlyCreated;
@@ -83,6 +84,7 @@ class ConsumerProfileService
         $profile = ProfileDetail::firstOrNew($profileKeys);
         $profile->fill($profileData);
         $profileIsDirty = $profile->isDirty();
+        $profileDirtyAttrs = array_keys($profile->getDirty());
         $profile->save();
         $profileWasCreated = $profile->wasRecentlyCreated;
 
@@ -90,6 +92,7 @@ class ConsumerProfileService
             $stats['inserted'] = 1;
         } elseif ($consumerIsDirty || $profileIsDirty) {
             $stats['updated'] = 1;
+            $stats['changes'] = array_merge($consumerDirtyAttrs, $profileDirtyAttrs);
         } else {
             $stats['unchanged'] = 1;
         }

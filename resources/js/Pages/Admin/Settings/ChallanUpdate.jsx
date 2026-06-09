@@ -110,6 +110,16 @@ export default function ChallanUpdate() {
             .finally(() => setLoading(false));
     };
 
+    // Helper to extract local date strictly as YYYY-MM-DD
+    const formatDateForInput = (val) => {
+        if (!val) return '';
+        const d = new Date(val);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const handleEdit = (challan) => {
         setEditingChallan(challan);
         setData({
@@ -117,7 +127,7 @@ export default function ChallanUpdate() {
             amount_within_dueDate: challan.amount_within_dueDate || '',
             amount_after_dueDate: challan.amount_after_dueDate || '',
             amount_arrears: challan.amount_arrears || '',
-            due_date: challan.due_date ? challan.due_date.substring(0, 10) : '',
+            due_date: formatDateForInput(challan.due_date),
             fee_type: challan.fee_type || '',
             status: challan.status || '',
             reserved: challan.reserved || '',

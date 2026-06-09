@@ -128,8 +128,6 @@ class DetailedFundheadStrategy implements AnalyticsStrategyInterface
 
             $groupId = null;
             $groupName = '';
-            $subGroupId = null;
-            $subGroupName = '';
 
             switch ($this->type) {
                 case 'overall':
@@ -139,14 +137,10 @@ class DetailedFundheadStrategy implements AnalyticsStrategyInterface
                 case 'region':
                     $groupId = $challan->region_id;
                     $groupName = $challan->region_name;
-                    $subGroupId = $challan->institution_id;
-                    $subGroupName = $challan->institution_name;
                     break;
                 case 'institution':
                     $groupId = $challan->institution_id;
                     $groupName = $challan->institution_name;
-                    $subGroupId = $challan->school_class_id . '-' . $challan->section;
-                    $subGroupName = $challan->class_name . ' - ' . $challan->section;
                     break;
                 case 'class_section':
                     $groupId = $challan->school_class_id . '-' . $challan->section;
@@ -155,8 +149,6 @@ class DetailedFundheadStrategy implements AnalyticsStrategyInterface
                 default:
                     $groupId = $challan->region_id;
                     $groupName = $challan->region_name;
-                    $subGroupId = $challan->institution_id;
-                    $subGroupName = $challan->institution_name;
                     break;
             }
 
@@ -178,9 +170,7 @@ class DetailedFundheadStrategy implements AnalyticsStrategyInterface
                 $data[$groupId] = [
                     'group_id' => $groupId,
                     'group_name' => $groupName,
-                    'sub_groups' => [],
                     'overall_stats' => [
-                        'total_sub_groups' => 0,
                         'total_students_paid' => 0,
                         'total_students_unpaid' => 0,
                         'total_paid_amount' => 0,
@@ -188,44 +178,8 @@ class DetailedFundheadStrategy implements AnalyticsStrategyInterface
                         'unpaid_student_ids' => [],
                         'category_wise_breakdown_count' => $categoriesBreakdown,
                         'fee_fund_head_wise_breakdown' => $overallFundBreakdown
-                    ],
-                    '_sub_group_keys' => []
+                    ]
                 ];
-            }
-
-            if ($subGroupId && !isset($data[$groupId]['sub_groups'][$subGroupId])) {
-                $categoriesBreakdown = [];
-                foreach ($activeCategories as $cat) {
-                    $categoriesBreakdown[$cat->category_title] = [
-                        'total_students' => 0, 'total_paid' => 0, 'total_unpaid' => 0,
-                        'total_paid_amount' => 0, 'total_amount' => 0,
-                        'paid_student_ids' => [], 'unpaid_student_ids' => []
-                    ];
-                }
-
-                $subFundBreakdown = [];
-                foreach (array_keys($overallFeeHeadsMap) as $headName) {
-                    $subFundBreakdown[$headName] = 0;
-                }
-
-                $data[$groupId]['sub_groups'][$subGroupId] = [
-                    'sub_group_id' => $subGroupId,
-                    'sub_group_name' => $subGroupName,
-                    'total_students' => 0,
-                    'total_paid' => 0,
-                    'total_unpaid' => 0,
-                    'total_paid_amount' => 0,
-                    'total_amount' => 0,
-                    'paid_student_ids' => [],
-                    'unpaid_student_ids' => [],
-                    'category_wise_breakdown_count' => $categoriesBreakdown,
-                    'fee_fund_head_wise_breakdown' => $subFundBreakdown
-                ];
-
-                if (!in_array($subGroupId, $data[$groupId]['_sub_group_keys'])) {
-                    $data[$groupId]['_sub_group_keys'][] = $subGroupId;
-                    $data[$groupId]['overall_stats']['total_sub_groups'] = count($data[$groupId]['_sub_group_keys']);
-                }
             }
 
             $snapshot = json_decode($challan->challan_snapshot, true);
@@ -263,24 +217,6 @@ class DetailedFundheadStrategy implements AnalyticsStrategyInterface
                 }
             }
 
-            // Sub Group Stats Update
-            if ($subGroupId) {
-                $data[$groupId]['sub_groups'][$subGroupId]['total_students'] += 1;
-                $data[$groupId]['sub_groups'][$subGroupId]['total_amount'] += $challanTotal;
-                if ($isPaid) {
-                    $data[$groupId]['sub_groups'][$subGroupId]['total_paid'] += 1;
-                    $data[$groupId]['sub_groups'][$subGroupId]['total_paid_amount'] += $challanTotal;
-                    if ($studentId && !in_array($studentId, $data[$groupId]['sub_groups'][$subGroupId]['paid_student_ids'])) {
-                        $data[$groupId]['sub_groups'][$subGroupId]['paid_student_ids'][] = $studentId;
-                    }
-                } else {
-                    $data[$groupId]['sub_groups'][$subGroupId]['total_unpaid'] += 1;
-                    if ($studentId && !in_array($studentId, $data[$groupId]['sub_groups'][$subGroupId]['unpaid_student_ids'])) {
-                        $data[$groupId]['sub_groups'][$subGroupId]['unpaid_student_ids'][] = $studentId;
-                    }
-                }
-            }
-
             // Category breakdown (Overall)
             if (!isset($data[$groupId]['overall_stats']['category_wise_breakdown_count'][$categoryName])) {
                 $data[$groupId]['overall_stats']['category_wise_breakdown_count'][$categoryName] = [
@@ -305,32 +241,6 @@ class DetailedFundheadStrategy implements AnalyticsStrategyInterface
                 }
             }
 
-            // Category breakdown (Sub Group)
-            if ($subGroupId) {
-                if (!isset($data[$groupId]['sub_groups'][$subGroupId]['category_wise_breakdown_count'][$categoryName])) {
-                    $data[$groupId]['sub_groups'][$subGroupId]['category_wise_breakdown_count'][$categoryName] = [
-                        'total_students' => 0, 'total_paid' => 0, 'total_unpaid' => 0,
-                        'total_paid_amount' => 0, 'total_amount' => 0,
-                        'paid_student_ids' => [], 'unpaid_student_ids' => []
-                    ];
-                }
-                $catRef = &$data[$groupId]['sub_groups'][$subGroupId]['category_wise_breakdown_count'][$categoryName];
-                $catRef['total_students'] += 1;
-                $catRef['total_amount'] += $challanTotal;
-                if ($isPaid) {
-                    $catRef['total_paid'] += 1;
-                    $catRef['total_paid_amount'] += $challanTotal;
-                    if ($studentId && !in_array($studentId, $catRef['paid_student_ids'])) {
-                        $catRef['paid_student_ids'][] = $studentId;
-                    }
-                } else {
-                    $catRef['total_unpaid'] += 1;
-                    if ($studentId && !in_array($studentId, $catRef['unpaid_student_ids'])) {
-                        $catRef['unpaid_student_ids'][] = $studentId;
-                    }
-                }
-            }
-
             // Fund Head Breakdown
             foreach ($fundHeadAmounts as $headName => $amount) {
                 if (!isset($data[$groupId]['overall_stats']['fee_fund_head_wise_breakdown'][$headName])) {
@@ -339,43 +249,12 @@ class DetailedFundheadStrategy implements AnalyticsStrategyInterface
                 if ($isPaid) {
                     $data[$groupId]['overall_stats']['fee_fund_head_wise_breakdown'][$headName] += $amount;
                 }
-
-                if ($subGroupId) {
-                    if (!isset($data[$groupId]['sub_groups'][$subGroupId]['fee_fund_head_wise_breakdown'][$headName])) {
-                        $data[$groupId]['sub_groups'][$subGroupId]['fee_fund_head_wise_breakdown'][$headName] = 0;
-                    }
-                    if ($isPaid) {
-                        $data[$groupId]['sub_groups'][$subGroupId]['fee_fund_head_wise_breakdown'][$headName] += $amount;
-                    }
-                }
             }
         });
 
         // Transform into the requested structure
         $resultData = [];
         foreach ($data as $groupId => $groupData) {
-            unset($groupData['_sub_group_keys']);
-
-            $subGroupList = [];
-            foreach ($groupData['sub_groups'] as $subKey => $subData) {
-
-                // Format category_wise_breakdown_count
-                $catArray = [];
-                foreach ($subData['category_wise_breakdown_count'] as $catName => $catStats) {
-                    $catArray[$catName] = [$catStats];
-                }
-                $subData['category_wise_breakdown_count'] = count($catArray) > 0 ? [$catArray] : [];
-
-                // Format fee_fund_head_wise_breakdown
-                $fundArray = [];
-                foreach ($subData['fee_fund_head_wise_breakdown'] as $fundName => $paidAmount) {
-                    $fundArray[$fundName] = ['paid_amount' => $paidAmount];
-                }
-                $subData['fee_fund_head_wise_breakdown'] = count($fundArray) > 0 ? [$fundArray] : [];
-
-                $subGroupList[] = $subData;
-            }
-            $groupData['sub_groups'] = $subGroupList;
 
             // Format overall_stats categories
             $overallCatArray = [];

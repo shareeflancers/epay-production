@@ -111,6 +111,12 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/utilities/categoryBind', [SettingsController::class, 'index'])->name('admin.settings.categoryBind');
     Route::post('/settings/search', [SettingsController::class, 'search'])->name('admin.settings.search');
     Route::get('/settings/categories', [SettingsController::class, 'getCategories'])->name('admin.settings.categories');
+
+    // Settings / Consumer ID Update
+    Route::get('/settings/consumer-update', [SettingsController::class, 'consumerUpdateIndex'])->name('admin.settings.consumer-update');
+    Route::post('/settings/consumer-update/search', [SettingsController::class, 'consumerUpdateSearch'])->name('admin.settings.consumer-update.search');
+    Route::put('/settings/consumer-update/{id}', [SettingsController::class, 'updateConsumerId'])->name('admin.settings.consumer-update.update');
+
     Route::put('/settings/student/{id}', [SettingsController::class, 'update'])->name('admin.settings.update');
     Route::put('/settings/student/{id}/status', [SettingsController::class, 'toggleStatus'])->name('admin.settings.toggle-status');
     Route::delete('/settings/student/{id}', [SettingsController::class, 'destroy'])->name('admin.settings.destroy');

@@ -54,6 +54,11 @@ class Consumer extends Model
         return $this->hasMany(ActiveChallan::class, 'consumer_id');
     }
 
+    public function challanHistories(): HasMany
+    {
+        return $this->hasMany(\App\Models\ChallanHistory::class, 'consumer_id');
+    }
+
     /**
      * Get the region this consumer belongs to.
      */

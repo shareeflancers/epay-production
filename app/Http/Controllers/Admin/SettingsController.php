@@ -148,6 +148,96 @@ class SettingsController extends Controller
         }
     }
 
+    /**
+     * Display the Consumer ID Update page.
+     */
+    public function consumerUpdateIndex()
+    {
+        return Inertia::render('Admin/Settings/ConsumerUpdate');
+    }
+
+    /**
+     * Search for a consumer by exact identification_number or consumer_number.
+     */
+    public function consumerUpdateSearch(Request $request)
+    {
+        $query = $request->input('query');
+
+        if (!$query) {
+            return response()->json(['data' => []]);
+        }
+
+        $consumers = Consumer::with(['profileDetails', 'institution'])
+            ->withCount(['activeChallans', 'challanHistories'])
+            ->where('identification_number', $query)
+            ->orWhere('consumer_number', $query)
+            ->get();
+
+        return response()->json(['data' => $consumers]);
+    }
+
+    /**
+     * Update consumer identification_number and propagate to snapshot JSONs.
+     */
+    public function updateConsumerId(Request $request, $id)
+    {
+        $request->validate([
+            'identification_number' => 'required|string|max:255',
+        ]);
+
+        $newIdNumber = $request->identification_number;
+
+        // Ensure it's not already used by another consumer
+        $exists = Consumer::where('identification_number', $newIdNumber)
+            ->where('id', '!=', $id)
+            ->exists();
+
+        if ($exists) {
+            return redirect()->back()->with('error', "The identification number {$newIdNumber} is already in use by another consumer.");
+        }
+
+        DB::beginTransaction();
+        try {
+            $consumer = Consumer::findOrFail($id);
+            $consumer->identification_number = $newIdNumber;
+            $consumer->save();
+
+            // Propagate to active challans
+            ActiveChallan::where('consumer_id', $consumer->id)
+                ->whereNotNull('challan_snapshot')
+                ->chunkById(100, function ($challans) use ($newIdNumber) {
+                    foreach ($challans as $challan) {
+                        $snap = json_decode($challan->challan_snapshot, true);
+                        if (isset($snap['consumer'])) {
+                            $snap['consumer']['identification_number'] = $newIdNumber;
+                            $challan->challan_snapshot = json_encode($snap);
+                            $challan->save();
+                        }
+                    }
+                });
+
+            // Propagate to challan history
+            \App\Models\ChallanHistory::where('consumer_id', $consumer->id)
+                ->whereNotNull('challan_snapshot')
+                ->chunkById(100, function ($histories) use ($newIdNumber) {
+                    foreach ($histories as $history) {
+                        $snap = json_decode($history->challan_snapshot, true);
+                        if (isset($snap['consumer'])) {
+                            $snap['consumer']['identification_number'] = $newIdNumber;
+                            $history->challan_snapshot = json_encode($snap);
+                            $history->save();
+                        }
+                    }
+                });
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Consumer Identification Number updated successfully, including all historical snapshots.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Failed to update identification number: ' . $e->getMessage());
+        }
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Bulk Challan Generation

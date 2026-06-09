@@ -97,6 +97,7 @@ export const adminNavItems = [
         children: [
             { label: '→ Category Update', href: '/admin/utilities/categoryBind' },
             { label: '→ Challan Update', href: '/admin/utilities/challanUpdate' },
+            { label: '→ B-Form Update', href: '/admin/settings/consumer-update' },
             { label: '→ Challan History', href: '/admin/settings/challan-history' },
             { label: '→ Database Backups', href: '/admin/settings/database-backups' },
         ]
