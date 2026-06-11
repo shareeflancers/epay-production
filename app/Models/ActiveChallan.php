@@ -230,6 +230,7 @@ class ActiveChallan extends Model
                     'challan_no'    => $latestUnpaidHistory->challan_no,
                     'billing_month' => $prevBillingMonth,
                     'amount'        => (float) $latestUnpaidHistory->amount_base,
+                    'breakdown'     => $snap['fee_structures'] ?? [],
                 ];
             }
         }

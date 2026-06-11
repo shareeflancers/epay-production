@@ -33,9 +33,16 @@ class YearSessionsController extends Controller
         }
 
         // Sorting
-        $sortField = $request->get('sort', 'created_at');
-        $sortDirection = $request->get('direction', 'desc');
-        $query->orderBy($sortField, $sortDirection);
+        $sortField = $request->get('sort', 'institution_id');
+        $sortDirection = $request->get('direction', 'asc');
+
+        if ($sortField === 'institution_id') {
+            $query->orderBy('institution_id', $sortDirection)
+                  ->orderBy('school_class_id', 'asc')
+                  ->orderBy('created_at', 'desc');
+        } else {
+            $query->orderBy($sortField, $sortDirection);
+        }
 
         // Pagination
         $perPage = $request->get('per_page', 100);
