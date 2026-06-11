@@ -68,6 +68,7 @@ class StudentSyncProcessor
         $report = [];
         $processedBforms = [];
         $fetchedConsumerNumbers = [];
+        $syncedInstitutionIds = [];
 
         foreach ($decryptedData as $rawStudent) {
             $stats['total']++;
@@ -76,6 +77,7 @@ class StudentSyncProcessor
                 // 1. Validation
                 $validated = $this->validationService->validate((array) $rawStudent);
                 $fetchedConsumerNumbers[] = $validated['consumer_number'];
+                $syncedInstitutionIds[] = $validated['s_school_idFk'];
             } catch (ValidationException $e) {
                 // If core validation fails, we can either throw it up (rolling back batch)
                 // or skip it. Current system logic rolls back on strict validation failure.
@@ -170,11 +172,15 @@ class StudentSyncProcessor
             }
         }
         $fetchedConsumerNumbers = array_unique($fetchedConsumerNumbers);
+        $syncedInstitutionIds = array_unique($syncedInstitutionIds);
 
-        if (!empty($fetchedConsumerNumbers)) {
+        // Deactivate students only from institutions that were present in the sync payload.
+        // If an institution's data wasn't fetched at all, its students are left untouched.
+        if (!empty($fetchedConsumerNumbers) && !empty($syncedInstitutionIds)) {
             $consumersToDeactivate = \App\Models\Consumer::with('profileDetails')
                 ->where('consumer_type', 'student')
                 ->where('is_active', 1)
+                ->whereIn('institution_id', $syncedInstitutionIds)
                 ->whereNotIn('consumer_number', $fetchedConsumerNumbers)
                 ->get();
 
@@ -186,7 +192,7 @@ class StudentSyncProcessor
 
                 $profile = $consumer->profileDetails->first();
                 $name = $profile ? $profile->name : 'Unknown';
-                $report[] = $this->deactivateAction->execute($name, $consumer->identification_number, 'Not found in upstream API payload');
+                $report[] = $this->deactivateAction->execute($name, $consumer->identification_number, 'Not found in upstream API payload for synced institution');
             }
         }
 

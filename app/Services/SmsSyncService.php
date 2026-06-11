@@ -62,13 +62,50 @@ class SmsSyncService
                     }
                 }
 
-                // Include Arrears if present as a separate head
+                // Include Arrears head-wise if present
                 if ($challan->amount_arrears > 0) {
-                    $heads[] = [
-                        'name' => 'Arrears',
-                        'amount' => (float) $challan->amount_arrears,
-                        'description' => "Arrears for Challan #{$challan->challan_no}. Verify: " . $verifyUrl,
-                    ];
+                    $arrearsHeadsSent = false;
+
+                    // Try to extract head-wise arrears breakdown from the challan snapshot
+                    $snapshot = json_decode($challan->challan_snapshot, true);
+                    $arrearsDetails = $snapshot['arrears_calculation']['details'] ?? [];
+
+                    if (!empty($arrearsDetails)) {
+                        $aggregatedArrearHeads = [];
+
+                        foreach ($arrearsDetails as $detail) {
+                            $breakdown = $detail['breakdown'] ?? [];
+                            foreach ($breakdown as $structure) {
+                                $headAmounts = $structure['fee_head_amounts'] ?? [];
+                                foreach ($headAmounts as $headName => $amount) {
+                                    $amt = (float) $amount;
+                                    if ($amt > 0) {
+                                        $aggregatedArrearHeads[$headName] = ($aggregatedArrearHeads[$headName] ?? 0) + $amt;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!empty($aggregatedArrearHeads)) {
+                            foreach ($aggregatedArrearHeads as $headName => $amount) {
+                                $heads[] = [
+                                    'name' => $headName,
+                                    'amount' => (float) $amount,
+                                    'description' => "Arrears for Challan #{$challan->challan_no} on " . $challan->date_paid->format('Y-m-d') . ". Verify: " . $verifyUrl,
+                                ];
+                            }
+                            $arrearsHeadsSent = true;
+                        }
+                    }
+
+                    // Fallback: if no head-wise breakdown was available, send as a single lump "Arrears" head
+                    if (!$arrearsHeadsSent) {
+                        $heads[] = [
+                            'name' => 'Arrears',
+                            'amount' => (float) $challan->amount_arrears,
+                            'description' => "Arrears for Challan #{$challan->challan_no}. Verify: " . $verifyUrl,
+                        ];
+                    }
                 }
 
                 // Final check: if no heads found but there is a base amount, use a generic head
