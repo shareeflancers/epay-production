@@ -145,6 +145,9 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
         return Inertia::render('Admin/ApiTesting');
     })->name('admin.api-testing');
 
+    Route::get('/test-challans', [\App\Http\Controllers\Admin\TestChallanController::class, 'index'])->name('admin.test-challans');
+    Route::post('/test-challans/generate', [\App\Http\Controllers\Admin\TestChallanController::class, 'generate'])->name('admin.test-challans.generate');
+
     Route::get('/monthly-procedure', function () {
         return Inertia::render('Admin/MonthlyProcedure');
     })->name('admin.monthly-procedure');
