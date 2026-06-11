@@ -71,14 +71,11 @@ class StudentSyncProcessor
 
         foreach ($decryptedData as $rawStudent) {
             $stats['total']++;
-            $rawArray = (array) $rawStudent;
-            if (!empty($rawArray['consumer_number'])) {
-                $fetchedConsumerNumbers[] = $rawArray['consumer_number'];
-            }
 
             try {
                 // 1. Validation
                 $validated = $this->validationService->validate((array) $rawStudent);
+                $fetchedConsumerNumbers[] = $validated['consumer_number'];
             } catch (ValidationException $e) {
                 // If core validation fails, we can either throw it up (rolling back batch)
                 // or skip it. Current system logic rolls back on strict validation failure.
