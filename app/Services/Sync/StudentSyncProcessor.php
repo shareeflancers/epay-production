@@ -7,6 +7,8 @@ use App\Services\Sync\Actions\SkipAction;
 use App\Services\Sync\Actions\InsertAction;
 use App\Services\Sync\Actions\UpdateAction;
 use App\Services\Sync\Actions\UnchangedAction;
+use App\Services\Sync\Actions\DeactivateAction;
+use App\Services\Sync\Actions\ReactivateAction;
 use Illuminate\Validation\ValidationException;
 
 class StudentSyncProcessor
@@ -20,6 +22,8 @@ class StudentSyncProcessor
     protected InsertAction $insertAction;
     protected UpdateAction $updateAction;
     protected UnchangedAction $unchangedAction;
+    protected DeactivateAction $deactivateAction;
+    protected ReactivateAction $reactivateAction;
 
     public function __construct(
         StudentValidationService $validationService,
@@ -28,7 +32,9 @@ class StudentSyncProcessor
         SkipAction $skipAction,
         InsertAction $insertAction,
         UpdateAction $updateAction,
-        UnchangedAction $unchangedAction
+        UnchangedAction $unchangedAction,
+        DeactivateAction $deactivateAction,
+        ReactivateAction $reactivateAction
     ) {
         $this->validationService = $validationService;
         $this->dbResolver = $dbResolver;
@@ -38,6 +44,8 @@ class StudentSyncProcessor
         $this->insertAction = $insertAction;
         $this->updateAction = $updateAction;
         $this->unchangedAction = $unchangedAction;
+        $this->deactivateAction = $deactivateAction;
+        $this->reactivateAction = $reactivateAction;
     }
 
     /**
@@ -49,15 +57,25 @@ class StudentSyncProcessor
     public function process(iterable $decryptedData): array
     {
         $stats = [
+            'total' => 0,
             'inserted' => 0,
             'updated' => 0,
+            'reactivated' => 0,
             'unchanged' => 0,
             'skipped' => 0,
+            'deactivated' => 0,
         ];
         $report = [];
         $processedBforms = [];
+        $fetchedConsumerNumbers = [];
 
         foreach ($decryptedData as $rawStudent) {
+            $stats['total']++;
+            $rawArray = (array) $rawStudent;
+            if (!empty($rawArray['consumer_number'])) {
+                $fetchedConsumerNumbers[] = $rawArray['consumer_number'];
+            }
+
             try {
                 // 1. Validation
                 $validated = $this->validationService->validate((array) $rawStudent);
@@ -134,9 +152,15 @@ class StudentSyncProcessor
                     $report[] = $reportItem;
                 }
             } elseif ($resultStats['updated']) {
-                $stats['updated']++;
                 $changes = $resultStats['changes'] ?? [];
-                $reportItem = $this->updateAction->execute($validated, $changes);
+                if (in_array('is_active', $changes)) {
+                    $stats['reactivated']++;
+                    $reportItem = $this->reactivateAction->execute($validated);
+                } else {
+                    $stats['updated']++;
+                    $reportItem = $this->updateAction->execute($validated, $changes);
+                }
+
                 if ($reportItem) {
                     $report[] = $reportItem;
                 }
@@ -146,6 +170,26 @@ class StudentSyncProcessor
                 if ($reportItem) {
                     $report[] = $reportItem;
                 }
+            }
+        }
+        $fetchedConsumerNumbers = array_unique($fetchedConsumerNumbers);
+
+        if (!empty($fetchedConsumerNumbers)) {
+            $consumersToDeactivate = \App\Models\Consumer::with('profileDetails')
+                ->where('consumer_type', 'student')
+                ->where('is_active', 1)
+                ->whereNotIn('consumer_number', $fetchedConsumerNumbers)
+                ->get();
+
+            foreach ($consumersToDeactivate as $consumer) {
+                $consumer->update(['is_active' => 0]);
+                \App\Models\ProfileDetail::where('consumer_id', $consumer->id)->update(['is_active' => 0]);
+
+                $stats['deactivated']++;
+
+                $profile = $consumer->profileDetails->first();
+                $name = $profile ? $profile->name : 'Unknown';
+                $report[] = $this->deactivateAction->execute($name, $consumer->identification_number, 'Not found in upstream API payload');
             }
         }
 
