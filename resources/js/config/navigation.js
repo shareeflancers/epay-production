@@ -88,7 +88,6 @@ export const adminNavItems = [
         children: [
             { label: '→ API Sandbox', href: '/admin/api-testing' },
             { label: '→ 1Link API Test', href: '/admin/one-link-testing' },
-            { label: '→ Test Challans', href: '/admin/test-challans' },
         ]
     },
     {

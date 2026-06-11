@@ -25,12 +25,12 @@ class ConsumerFactory extends Factory
     public function definition(): array
     {
         return [
-            'consumer_type' => fake()->randomElement(['student', 'institution', 'region', 'directorate', 'inductee']),
+            'consumer_type' => 'student',
             'identification_number' => fake()->unique()->numerify('##########'),
             'consumer_number' => fake()->unique()->numerify('############'),
             'institution_id' => fake()->numerify('###'),
             'region_id' => fake()->numerify('###'),
-            'is_active' => fake()->boolean(80), // 80% chance of being active
+            'is_active' => 1,
         ];
     }
 
