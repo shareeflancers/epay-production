@@ -472,6 +472,7 @@ class SettingsController extends Controller
                                     'challan_no'    => $latestUnpaidHistory->challan_no,
                                     'billing_month' => $prevBillingMonth,
                                     'amount'        => (float) $latestUnpaidHistory->amount_base,
+                                    'breakdown'     => $snap['fee_structures'] ?? [],
                                 ];
                             }
                         }
@@ -815,6 +816,7 @@ class SettingsController extends Controller
                                 'challan_no'    => $latestVoucher->challan_no,
                                 'billing_month' => $prevBillingMonth,
                                 'amount'        => (float) $latestVoucher->amount_base,
+                                'breakdown'     => isset($prevSnap) && isset($prevSnap['aggregated_heads']) ? [['fee_head_amounts' => $prevSnap['aggregated_heads']]] : [],
                             ];
                         }
                     }
