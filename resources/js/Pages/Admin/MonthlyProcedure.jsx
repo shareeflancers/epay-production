@@ -262,6 +262,12 @@ export default function MonthlyProcedure() {
                                     <List size="xs" spacing="xs" mb="md" withPadding>
                                         <List.Item>New: <Badge size="xs" color="green">{results.step2.stats.inserted}</Badge></List.Item>
                                         <List.Item>Updated: <Badge size="xs" color="blue">{results.step2.stats.updated}</Badge></List.Item>
+                                        {results.step2.stats.reactivated > 0 && (
+                                            <List.Item>Reactivated: <Badge size="xs" color="teal">{results.step2.stats.reactivated}</Badge></List.Item>
+                                        )}
+                                        {results.step2.stats.deactivated > 0 && (
+                                            <List.Item>Deactivated: <Badge size="xs" color="red">{results.step2.stats.deactivated}</Badge></List.Item>
+                                        )}
                                     </List>
                                 )}
                             </Box>

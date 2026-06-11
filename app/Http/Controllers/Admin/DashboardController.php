@@ -13,7 +13,7 @@ class DashboardController extends Controller
     public function index()
     {
         // Fetch stats
-        $totalConsumers = Consumer::count();
+        $totalConsumers = Consumer::where('is_active', 1)->count();
         $totalActiveChallans = ActiveChallan::count();
         $paidChallans = ActiveChallan::where('status', 'P')->count();
         $unpaidChallans = ActiveChallan::where('status', 'U')->count();

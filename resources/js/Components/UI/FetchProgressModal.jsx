@@ -503,14 +503,19 @@ export default function FetchProgressModal({ opened, onClose, fetchUrl, fetchLab
                             {syncStats && (
                                 <Box>
                                     <Text size="sm" c="dimmed">
-                                        {(syncStats.inserted === 0 && syncStats.updated === 0 && (!syncStats.skipped || syncStats.skipped === 0))
+                                        {(syncStats.inserted === 0 && syncStats.updated === 0 && (!syncStats.skipped || syncStats.skipped === 0) && (!syncStats.reactivated || syncStats.reactivated === 0) && (!syncStats.deactivated || syncStats.deactivated === 0))
                                             ? "All data already up to date."
-                                            : `Sync Complete: ${syncStats.inserted} New, ${syncStats.updated} Updated${syncStats.skipped ? `, ${syncStats.skipped} Skipped` : ''}`
+                                            : `Sync Complete: ${syncStats.inserted} New, ${syncStats.updated} Updated${syncStats.reactivated ? `, ${syncStats.reactivated} Reactivated` : ''}${syncStats.deactivated ? `, ${syncStats.deactivated} Deactivated` : ''}${syncStats.skipped ? `, ${syncStats.skipped} Skipped` : ''}`
                                         }
                                     </Text>
                                     {syncStats.unchanged > 0 && (
                                         <Text size="xs" c="dimmed">
                                             ({syncStats.unchanged} records unchanged)
+                                        </Text>
+                                    )}
+                                    {syncStats.total > 0 && (
+                                        <Text size="xs" c="dimmed" mt={2} fw={500}>
+                                            Total Fetched: {syncStats.total}
                                         </Text>
                                     )}
                                     {reportData && (
